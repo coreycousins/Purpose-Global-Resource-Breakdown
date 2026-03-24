@@ -452,6 +452,43 @@ grid-template-rows: auto auto;
 
 </head>
 <body>
+<!-- DEBUG PANEL -->
+<div id="debugPanel" style="background:#1a0a0a;border:2px solid #f25c5c;color:#f25c5c;font-family:monospace;font-size:12px;padding:16px;margin:16px;line-height:1.8;white-space:pre-wrap;z-index:9999;position:relative;">
+DEBUG LOG — loading...
+</div>
+<script>
+(function() {
+  var log = [];
+  function dbg(msg) {
+    log.push(msg);
+    var el = document.getElementById('debugPanel');
+    if (el) el.textContent = log.join('\n');
+    console.log('[DBG]', msg);
+  }
+  window.dbg = dbg;
+
+dbg(‘1. Inline debug script running. readyState=’ + document.readyState);
+
+window.onerror = function(msg, src, line, col, err) {
+dbg(’UNCAUGHT ERROR: ’ + msg + ’ (line ’ + line + ‘)’);
+};
+
+document.addEventListener(‘DOMContentLoaded’, function() {
+dbg(‘2. DOMContentLoaded fired’);
+var tbl = document.getElementById(‘holdingsTable’);
+dbg(’3. holdingsTable element: ’ + (tbl ? ‘FOUND’ : ‘NULL — THIS IS THE BUG’));
+var summary = document.getElementById(‘totalMove’);
+dbg(’4. totalMove element: ’ + (summary ? ‘FOUND’ : ‘NULL’));
+});
+
+window.addEventListener(‘load’, function() {
+dbg(‘5. window.load fired’);
+var tbl = document.getElementById(‘holdingsTable’);
+dbg(’6. holdingsTable on window.load: ’ + (tbl ? ‘FOUND, childCount=’ + tbl.children.length : ‘NULL’));
+});
+})();
+</script>
+
 <div class="container">
 
   <!-- Header -->
