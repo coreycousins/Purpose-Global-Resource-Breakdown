@@ -1,275 +1,244 @@
-import { useState, useEffect, useCallback } from “react”;
+import { useState, useEffect, useMemo } from “react”;
 
 const HOLDINGS = [
-{ ticker: “TNZ.V”,  display: “TNZ CN”,    issuer: “Tenaz Energy Corp”,            weight: 0.1886, manual: false },
-{ ticker: “VLO”,    display: “VLO US”,    issuer: “Valero Energy Corp”,           weight: 0.1136, manual: false },
-{ ticker: “MPC”,    display: “MPC US”,    issuer: “Marathon Petroleum Corp”,      weight: 0.0984, manual: false },
-{ ticker: “SOC”,    display: “SOC US”,    issuer: “Sable Offshore Corp”,          weight: 0.0529, manual: false },
-{ ticker: “SVM”,    display: “SVM CN”,    issuer: “Silvercorp Metals Inc”,        weight: 0.0491, manual: false },
-{ ticker: null,     display: “{cash}”,    issuer: “CAD Cash”,                     weight: 0.0442, manual: true  },
-{ ticker: “LAAC”,   display: “LAR US”,    issuer: “Lithium Argentina AG”,         weight: 0.0393, manual: false },
-{ ticker: “SU.TO”,  display: “SU CN”,     issuer: “Suncor Energy Inc”,            weight: 0.0366, manual: false },
-{ ticker: “CNQ.TO”, display: “CNQ CN”,    issuer: “Canadian Natural Resources”,   weight: 0.0358, manual: false },
-{ ticker: “XOM”,    display: “XOM US”,    issuer: “Exxon Mobil Corp”,             weight: 0.0356, manual: false },
-{ ticker: “LNG”,    display: “LNG US”,    issuer: “Cheniere Energy Inc”,          weight: 0.0315, manual: false },
-{ ticker: null,     display: “MNY CN”,    issuer: “Purpose Cash Mgmt Fund”,       weight: 0.0303, manual: true  },
-{ ticker: “KRP”,    display: “KRP US”,    issuer: “Kimbell Royalty Partners LP”,  weight: 0.0271, manual: false },
-{ ticker: “CVE.TO”, display: “CVE CN”,    issuer: “Cenovus Energy Inc”,           weight: 0.0269, manual: false },
-{ ticker: “NICU.V”, display: “NICU CN”,   issuer: “Magna Mining Inc”,             weight: 0.0262, manual: false },
-{ ticker: null,     display: “SICO CN”,   issuer: “Silverco Mining Ltd”,          weight: 0.0254, manual: true  },
-{ ticker: null,     display: “HSTR CN”,   issuer: “Heliostar Metals Ltd”,         weight: 0.0252, manual: true  },
-{ ticker: “EFXT”,   display: “EFXT US”,   issuer: “Enerflex Ltd”,                 weight: 0.0218, manual: false },
-{ ticker: null,     display: “.LAF.R CN”, issuer: “N/A”,                          weight: 0.0191, manual: true  },
-{ ticker: null,     display: “.SM.SR CN”, issuer: “N/A”,                          weight: 0.0146, manual: true  },
-{ ticker: null,     display: “CHAR LN”,   issuer: “Chariot Ltd”,                  weight: 0.0121, manual: true  },
-{ ticker: null,     display: “MNU/U CN”,  issuer: “Purpose USD Cash Mgmt Fund”,   weight: 0.0108, manual: true  },
-{ ticker: “LTH.V”,  display: “LTH CN”,    issuer: “Lithium Ionic Corp”,           weight: 0.0089, manual: false },
+{ ticker: “TNZ.V”,  display: “TNZ CN”,    issuer: “Tenaz Energy Corp”,           weight: 0.1886, manual: false },
+{ ticker: “VLO”,    display: “VLO US”,    issuer: “Valero Energy Corp”,          weight: 0.1136, manual: false },
+{ ticker: “MPC”,    display: “MPC US”,    issuer: “Marathon Petroleum Corp”,     weight: 0.0984, manual: false },
+{ ticker: “SOC”,    display: “SOC US”,    issuer: “Sable Offshore Corp”,         weight: 0.0529, manual: false },
+{ ticker: “SVM”,    display: “SVM CN”,    issuer: “Silvercorp Metals Inc”,       weight: 0.0491, manual: false },
+{ ticker: null,     display: “{cash}”,    issuer: “CAD Cash”,                    weight: 0.0442, manual: true  },
+{ ticker: “LAAC”,   display: “LAR US”,    issuer: “Lithium Argentina AG”,        weight: 0.0393, manual: false },
+{ ticker: “SU.TO”,  display: “SU CN”,     issuer: “Suncor Energy Inc”,           weight: 0.0366, manual: false },
+{ ticker: “CNQ.TO”, display: “CNQ CN”,    issuer: “Canadian Natural Resources”,  weight: 0.0358, manual: false },
+{ ticker: “XOM”,    display: “XOM US”,    issuer: “Exxon Mobil Corp”,            weight: 0.0356, manual: false },
+{ ticker: “LNG”,    display: “LNG US”,    issuer: “Cheniere Energy Inc”,         weight: 0.0315, manual: false },
+{ ticker: null,     display: “MNY CN”,    issuer: “Purpose Cash Mgmt Fund”,      weight: 0.0303, manual: true  },
+{ ticker: “KRP”,    display: “KRP US”,    issuer: “Kimbell Royalty Partners LP”, weight: 0.0271, manual: false },
+{ ticker: “CVE.TO”, display: “CVE CN”,    issuer: “Cenovus Energy Inc”,          weight: 0.0269, manual: false },
+{ ticker: “NICU.V”, display: “NICU CN”,   issuer: “Magna Mining Inc”,            weight: 0.0262, manual: false },
+{ ticker: null,     display: “SICO CN”,   issuer: “Silverco Mining Ltd”,         weight: 0.0254, manual: true  },
+{ ticker: null,     display: “HSTR CN”,   issuer: “Heliostar Metals Ltd”,        weight: 0.0252, manual: true  },
+{ ticker: “EFXT”,   display: “EFXT US”,   issuer: “Enerflex Ltd”,                weight: 0.0218, manual: false },
+{ ticker: null,     display: “.LAF.R CN”, issuer: “N/A”,                         weight: 0.0191, manual: true  },
+{ ticker: null,     display: “.SM.SR CN”, issuer: “N/A”,                         weight: 0.0146, manual: true  },
+{ ticker: null,     display: “CHAR LN”,   issuer: “Chariot Ltd”,                 weight: 0.0121, manual: true  },
+{ ticker: null,     display: “MNU/U CN”,  issuer: “Purpose USD Cash Mgmt Fund”,  weight: 0.0108, manual: true  },
+{ ticker: “LTH.V”,  display: “LTH CN”,    issuer: “Lithium Ionic Corp”,          weight: 0.0089, manual: false },
 ];
 
-const G = {
-bg:      “#090c0e”,
-surface: “#0d1114”,
-border:  “#1a2028”,
-borderL: “#222c34”,
-text:    “#c0ccd4”,
-muted:   “#3e5060”,
-label:   “#6a8898”,
-green:   “#34c97a”,
-red:     “#e84f4f”,
-amber:   “#eda030”,
-accent:  “#4dafcf”,
+const C = {
+bg:     “#090c0e”,
+card:   “#0d1114”,
+border: “#1a2028”,
+text:   “#c0ccd4”,
+muted:  “#3e5060”,
+label:  “#6a8898”,
+green:  “#34c97a”,
+red:    “#e84f4f”,
+amber:  “#eda030”,
+accent: “#4dafcf”,
 };
 
-function parseManual(val) {
-if (!val) return null;
-const n = parseFloat(val.replace(”%”, “”).trim());
-return isNaN(n) ? null : n;
-}
+const COLS = “96px 1fr 68px 84px 92px 16px”;
 
 async function fetchQuote(ticker) {
-const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
 try {
+const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
 const r = await fetch(url, { headers: { Accept: “application/json” } });
 if (!r.ok) throw new Error(“HTTP “ + r.status);
 const j = await r.json();
 const meta = j?.chart?.result?.[0]?.meta;
-if (!meta) throw new Error(“no meta”);
-const prev = meta.chartPreviousClose || meta.previousClose;
-const price = meta.regularMarketPrice;
+const prev = meta?.chartPreviousClose || meta?.previousClose;
+const price = meta?.regularMarketPrice;
 if (!prev || !price) throw new Error(“no price”);
-return { changePercent: ((price - prev) / prev) * 100, error: false };
+return { pct: ((price - prev) / prev) * 100, ok: true };
 } catch {
-return { changePercent: 0, error: true };
+return { pct: 0, ok: false };
 }
+}
+
+function signed(n, decimals = 2) {
+return (n >= 0 ? “+” : “”) + n.toFixed(decimals) + “%”;
 }
 
 export default function App() {
-const [prices, setPrices]     = useState({});
-const [manuals, setManuals]   = useState({});
-const [status, setStatus]     = useState(“idle”); // idle | loading | done | error
-const [updatedAt, setUpdatedAt] = useState(null);
-const [loadedCount, setLoadedCount] = useState(0);
+const [prices,   setPrices]   = useState({});
+const [manuals,  setManuals]  = useState({});
+const [loading,  setLoading]  = useState(false);
+const [loadMsg,  setLoadMsg]  = useState(”—”);
+const [dotOk,    setDotOk]    = useState(null); // null | true | false
+const [time,     setTime]     = useState(””);
 
-const liveHoldings = HOLDINGS.filter(h => !h.manual && h.ticker);
+const liveList = HOLDINGS.filter(h => !h.manual && h.ticker);
 
-const fetchAll = useCallback(async () => {
-setStatus(“loading”);
-const results = await Promise.allSettled(
-liveHoldings.map(h => fetchQuote(h.ticker).then(d => ({ ticker: h.ticker, …d })))
+async function doFetch() {
+setLoading(true);
+setDotOk(null);
+setLoadMsg(“Fetching…”);
+const settled = await Promise.allSettled(
+liveList.map(h => fetchQuote(h.ticker).then(d => ({ ticker: h.ticker, …d })))
 );
-const next = { …prices };
-let errs = 0, loaded = 0;
-results.forEach(r => {
+const next = {};
+let okCount = 0;
+settled.forEach(r => {
 if (r.status === “fulfilled”) {
 next[r.value.ticker] = r.value;
-if (r.value.error) errs++; else loaded++;
+if (r.value.ok) okCount++;
 }
 });
 setPrices(next);
-setLoadedCount(loaded);
-setStatus(errs > 0 ? “error” : “done”);
-setUpdatedAt(new Date().toLocaleTimeString([], { hour: “2-digit”, minute: “2-digit”, second: “2-digit” }));
-}, []);
+setLoadMsg(`${okCount}/${liveList.length} loaded`);
+setDotOk(okCount > 0);
+setTime(new Date().toLocaleTimeString([], { hour: “2-digit”, minute: “2-digit”, second: “2-digit” }));
+setLoading(false);
+}
 
-useEffect(() => { fetchAll(); }, []);
+useEffect(() => { doFetch(); }, []);
 
-// Compute summary
-let totalContrib = 0, coveredWeight = 0;
-let topPos = { contrib: -Infinity, label: null };
-let topNeg = { contrib:  Infinity, label: null };
-
-const rows = HOLDINGS.map((h, i) => {
+const rows = useMemo(() => HOLDINGS.map(h => {
 let dayPct = null;
-let contrib = 0;
-
-```
 if (h.manual) {
-  const p = parseManual(manuals[h.display] || "");
-  if (p !== null) { dayPct = p; coveredWeight += h.weight; }
+const n = parseFloat((manuals[h.display] || “”).replace(”%”, “”).trim());
+if (!isNaN(n)) dayPct = n;
 } else {
-  const d = prices[h.ticker];
-  if (d && !d.error) { dayPct = d.changePercent; coveredWeight += h.weight; }
+const d = prices[h.ticker];
+if (d?.ok) dayPct = d.pct;
 }
+return { …h, dayPct, contrib: dayPct !== null ? h.weight * dayPct : 0 };
+}), [prices, manuals]);
 
-if (dayPct !== null) {
-  contrib = h.weight * dayPct;
-  totalContrib += contrib;
-  if (contrib > topPos.contrib) topPos = { contrib, label: h.display };
-  if (contrib < topNeg.contrib) topNeg = { contrib, label: h.display };
+const { total, covPct, best, worst } = useMemo(() => {
+let total = 0, covered = 0;
+let best  = { contrib: -Infinity, label: null };
+let worst = { contrib:  Infinity, label: null };
+rows.forEach(r => {
+if (r.dayPct !== null) {
+total   += r.contrib;
+covered += r.weight;
+if (r.contrib > best.contrib)  best  = { contrib: r.contrib, label: r.display };
+if (r.contrib < worst.contrib) worst = { contrib: r.contrib, label: r.display };
 }
-
-return { ...h, dayPct, contrib, i };
-```
-
 });
+return { total, covPct: Math.round(covered * 100), best, worst };
+}, [rows]);
 
-const covPct = Math.round(coveredWeight * 100);
-const totalSign = totalContrib >= 0 ? “+” : “”;
-const totalColor = totalContrib > 0.001 ? G.green : totalContrib < -0.001 ? G.red : G.text;
+const totalColor = total > 0.001 ? C.green : total < -0.001 ? C.red : C.text;
 
 return (
-<div style={{
-background: G.bg, color: G.text, fontFamily: “ui-monospace, ‘Cascadia Code’, ‘SF Mono’, monospace”,
-fontSize: 13, minHeight: “100vh”, padding: “40px 28px 80px”,
-}}>
-{/* dot grid */}
-<div style={{
-position: “fixed”, inset: 0, pointerEvents: “none”, zIndex: 0,
-backgroundImage: “radial-gradient(circle, rgba(77,175,207,0.07) 1px, transparent 1px)”,
-backgroundSize: “28px 28px”,
-}} />
+<div style={{ background: C.bg, color: C.text, fontFamily: “ui-monospace,‘SF Mono’,Menlo,monospace”, fontSize: 13, minHeight: “100vh”, padding: “36px 24px 72px” }}>
+<div style={{ position: “fixed”, inset: 0, pointerEvents: “none”,
+backgroundImage: “radial-gradient(circle, rgba(77,175,207,0.055) 1px, transparent 1px)”,
+backgroundSize: “28px 28px” }} />
 
 ```
-  <div style={{ position: "relative", zIndex: 1, maxWidth: 920, margin: "0 auto" }}>
+  <div style={{ position: "relative", maxWidth: 900, margin: "0 auto" }}>
 
     {/* ── Header ── */}
-    <div style={{ borderBottom: `1px solid ${G.border}`, paddingBottom: 24, marginBottom: 36,
-      display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end",
+      flexWrap: "wrap", gap: 16, borderBottom: `1px solid ${C.border}`, paddingBottom: 22, marginBottom: 28 }}>
       <div>
-        <div style={{ fontSize: 9.5, letterSpacing: "0.2em", color: G.muted, textTransform: "uppercase",
-          marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ display: "inline-block", width: 16, height: 1, background: G.accent, opacity: 0.6 }} />
+        <div style={{ fontSize: 9, letterSpacing: "0.22em", color: C.muted, textTransform: "uppercase", marginBottom: 10 }}>
           Portfolio Attribution
         </div>
-        <div style={{ fontFamily: "Georgia, serif", fontSize: 28, fontWeight: 300, color: "#dde8ee",
-          letterSpacing: "-0.02em", lineHeight: 1.2, marginBottom: 4 }}>
+        <div style={{ fontFamily: "Georgia,serif", fontSize: 26, fontWeight: 300, color: "#dde8ee", lineHeight: 1.2, marginBottom: 4 }}>
           Purpose Global Resources<br />Series F
         </div>
-        <div style={{ fontSize: 10.5, color: G.muted, letterSpacing: "0.07em" }}>
+        <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.06em" }}>
           Inside holdings · Daily movement breakdown
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-        <div style={{ fontSize: 10.5, color: G.muted }}>
-          {updatedAt ? `Updated ${updatedAt}` : "—"}
-        </div>
-        <button
-          onClick={fetchAll}
-          disabled={status === "loading"}
-          style={{
-            background: "transparent", border: `1px solid ${G.borderL}`, color: G.accent,
-            fontFamily: "inherit", fontSize: 10.5, padding: "6px 16px", cursor: status === "loading" ? "not-allowed" : "pointer",
-            letterSpacing: "0.07em", opacity: status === "loading" ? 0.4 : 1, transition: "all 0.15s",
-          }}
-        >
-          {status === "loading" ? "↻ Fetching…" : "↻ Refresh Prices"}
+        {time && <div style={{ fontSize: 10, color: C.muted }}>Updated {time}</div>}
+        <button onClick={doFetch} disabled={loading} style={{
+          background: "transparent", border: `1px solid rgba(77,175,207,0.35)`, color: C.accent,
+          fontFamily: "inherit", fontSize: 10, padding: "6px 14px",
+          cursor: loading ? "not-allowed" : "pointer", letterSpacing: "0.07em",
+          opacity: loading ? 0.4 : 1,
+        }}>
+          {loading ? "↻ Fetching…" : "↻ Refresh Prices"}
         </button>
       </div>
     </div>
 
-    {/* ── Summary strip ── */}
-    <div style={{
-      background: G.surface, border: `1px solid ${G.border}`, marginBottom: 32,
-      display: "grid", gridTemplateColumns: "auto 1px 1fr 1px auto 1px auto",
-    }}>
-      {/* Est move */}
-      <div style={{ padding: "20px 26px" }}>
-        <div style={{ fontSize: 9.5, letterSpacing: "0.13em", color: G.muted, textTransform: "uppercase", marginBottom: 10 }}>
-          Est. Fund Move
-        </div>
-        <div style={{ fontFamily: "Georgia, serif", fontSize: 38, fontWeight: 700,
-          letterSpacing: "-0.03em", lineHeight: 1, color: totalColor }}>
-          {coveredWeight > 0 ? `${totalSign}${totalContrib.toFixed(3)}%` : "—"}
+    {/* ── Summary ── */}
+    <div style={{ display: "grid", gridTemplateColumns: "150px 1px 1fr 1px 170px 1px 150px",
+      background: C.card, border: `1px solid ${C.border}`, marginBottom: 28 }}>
+
+      <div style={{ padding: "18px 20px" }}>
+        <Label>Est. Fund Move</Label>
+        <div style={{ fontFamily: "Georgia,serif", fontSize: 34, fontWeight: 700,
+          color: totalColor, letterSpacing: "-0.03em", lineHeight: 1, marginTop: 8 }}>
+          {covPct > 0 ? signed(total, 3) : "—"}
         </div>
       </div>
-      <div style={{ background: G.border }} />
 
-      {/* Coverage */}
-      <div style={{ padding: "20px 26px", minWidth: 180 }}>
-        <div style={{ fontSize: 9.5, letterSpacing: "0.13em", color: G.muted, textTransform: "uppercase", marginBottom: 10 }}>
-          Coverage
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: G.muted, marginBottom: 8 }}>
+      <div style={{ background: C.border }} />
+
+      <div style={{ padding: "18px 20px" }}>
+        <Label>Coverage</Label>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted, margin: "8px 0 6px" }}>
           <span>{covPct}%</span>
           <span>
-            <StatusDot status={status} />
-            {status === "loading" ? "Fetching…"
-              : status === "done" || status === "error" ? `${loadedCount}/${liveHoldings.length} loaded`
-              : "—"}
+            <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", marginRight: 5, verticalAlign: "middle",
+              background: loading ? C.amber : dotOk === true ? C.green : dotOk === false ? C.red : C.muted }} />
+            {loadMsg}
           </span>
         </div>
-        <div style={{ height: 3, background: G.border, borderRadius: 2, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.min(covPct, 100)}%`,
-            background: G.accent, borderRadius: 2, transition: "width 0.5s ease" }} />
+        <div style={{ height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: Math.min(covPct, 100) + "%", background: C.accent, transition: "width 0.5s" }} />
         </div>
       </div>
-      <div style={{ background: G.border }} />
 
-      {/* Top contributor */}
-      <div style={{ padding: "20px 26px" }}>
-        <div style={{ fontSize: 9.5, letterSpacing: "0.13em", color: G.muted, textTransform: "uppercase", marginBottom: 10 }}>
-          Top Contributor
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 500, color: G.green }}>
-          {topPos.label ? `${topPos.label}  +${topPos.contrib.toFixed(3)}%` : "—"}
+      <div style={{ background: C.border }} />
+
+      <div style={{ padding: "18px 20px" }}>
+        <Label>Top Contributor</Label>
+        <div style={{ color: C.green, fontSize: 11, fontWeight: 500, marginTop: 8 }}>
+          {best.label ? `${best.label}  ${signed(best.contrib, 3)}` : "—"}
         </div>
       </div>
-      <div style={{ background: G.border }} />
 
-      {/* Top drag */}
-      <div style={{ padding: "20px 26px" }}>
-        <div style={{ fontSize: 9.5, letterSpacing: "0.13em", color: G.muted, textTransform: "uppercase", marginBottom: 10 }}>
-          Top Drag
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 500, color: G.red }}>
-          {topNeg.label ? `${topNeg.label}  ${topNeg.contrib.toFixed(3)}%` : "—"}
+      <div style={{ background: C.border }} />
+
+      <div style={{ padding: "18px 20px" }}>
+        <Label>Top Drag</Label>
+        <div style={{ color: C.red, fontSize: 11, fontWeight: 500, marginTop: 8 }}>
+          {worst.label ? `${worst.label}  ${signed(worst.contrib, 3)}` : "—"}
         </div>
       </div>
     </div>
 
     {/* ── Table ── */}
-    <SectionLabel>Holdings</SectionLabel>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+      <span style={{ fontSize: 9, letterSpacing: "0.18em", color: C.muted, textTransform: "uppercase" }}>Holdings</span>
+      <span style={{ flex: 1, height: 1, background: C.border }} />
+    </div>
 
-    {/* Header row */}
-    <div style={{
-      display: "grid", gridTemplateColumns: "100px 1fr 72px 86px 100px 20px",
-      padding: "7px 14px", fontSize: 9.5, letterSpacing: "0.12em", color: G.muted,
-      textTransform: "uppercase", borderBottom: `1px solid ${G.border}`, marginBottom: 2,
-    }}>
-      <span>Ticker</span><span>Issuer</span>
+    {/* col headers */}
+    <div style={{ display: "grid", gridTemplateColumns: COLS, padding: "6px 12px",
+      fontSize: 9, letterSpacing: "0.12em", color: C.muted, textTransform: "uppercase",
+      borderBottom: `1px solid ${C.border}`, marginBottom: 2 }}>
+      <span>Ticker</span>
+      <span>Issuer</span>
       <span style={{ textAlign: "right" }}>Weight</span>
       <span style={{ textAlign: "right" }}>Day %</span>
-      <span style={{ textAlign: "right" }}>Contribution</span>
+      <span style={{ textAlign: "right" }}>Contrib</span>
       <span />
     </div>
 
-    {rows.map((h) => (
-      <HoldingRow
-        key={h.display}
-        h={h}
-        prices={prices}
-        manualVal={manuals[h.display] || ""}
-        onManualChange={(val) => setManuals(m => ({ ...m, [h.display]: val }))}
+    {rows.map(h => (
+      <HRow key={h.display} h={h} loading={loading}
+        priceData={prices[h.ticker]}
+        val={manuals[h.display] || ""}
+        onChange={v => setManuals(m => ({ ...m, [h.display]: v }))}
       />
     ))}
 
-    {/* Footer */}
-    <div style={{ marginTop: 24, fontSize: 10, color: G.muted, lineHeight: 1.8,
-      borderTop: `1px solid ${G.border}`, paddingTop: 16, letterSpacing: "0.02em" }}>
-      Prices via Yahoo Finance (15–20 min delay). Returns in native currency — CAD for TSX, USD for NYSE/NASDAQ.{" "}
-      Attribution = Σ(weight × daily%).{" "}
-      <span style={{ color: G.amber }}>Amber</span> rows require manual entry (illiquid/unlisted).{" "}
-      For informational use only — not investment advice.
+    <div style={{ marginTop: 22, fontSize: 10, color: C.muted, lineHeight: 1.8,
+      borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+      Prices via Yahoo Finance (15–20 min delay). Native currency — CAD for TSX, USD for NYSE/NASDAQ.
+      Attribution = Σ(weight × daily%). <span style={{ color: C.amber }}>Amber</span> = manual entry (illiquid/unlisted).
+      Not investment advice.
     </div>
   </div>
 </div>
@@ -278,130 +247,67 @@ backgroundSize: “28px 28px”,
 );
 }
 
-function StatusDot({ status }) {
-const color = status === “loading” ? G.amber : status === “done” ? G.green : status === “error” ? G.red : G.muted;
-return (
-<span style={{
-display: “inline-block”, width: 5, height: 5, borderRadius: “50%”,
-background: color, marginRight: 5, verticalAlign: “middle”, position: “relative”, top: -1,
-}} />
-);
+function Label({ children }) {
+return <div style={{ fontSize: 9, letterSpacing: “0.14em”, color: C.muted, textTransform: “uppercase” }}>{children}</div>;
 }
 
-function SectionLabel({ children }) {
-return (
-<div style={{ fontSize: 9.5, letterSpacing: “0.18em”, color: G.muted, textTransform: “uppercase”,
-marginBottom: 10, paddingLeft: 14, display: “flex”, alignItems: “center”, gap: 10 }}>
-{children}
-<span style={{ flex: 1, height: 1, background: G.border }} />
-</div>
-);
-}
-
-function HoldingRow({ h, prices, manualVal, onManualChange }) {
+function HRow({ h, loading, priceData, val, onChange }) {
 const [hover, setHover] = useState(false);
-
-const { dayPct, contrib } = h;
-const barW = Math.min(Math.abs(contrib) / 0.4 * 100, 100);
-const barColor = contrib > 0 ? G.green : contrib < 0 ? G.red : “transparent”;
+const barW = Math.min(Math.abs(h.contrib) / 0.4 * 100, 100);
+const barColor = h.contrib > 0 ? C.green : h.contrib < 0 ? C.red : “transparent”;
 
 let dayEl;
 if (h.manual) {
 dayEl = (
-<input
-value={manualVal}
-placeholder=“±0.00%”
-onChange={e => onManualChange(e.target.value)}
+<input value={val} placeholder=“±0.00%”
+onChange={e => onChange(e.target.value)}
 onBlur={e => {
-const n = parseManual(e.target.value);
-if (n !== null) onManualChange((n >= 0 ? “+” : “”) + n.toFixed(2) + “%”);
+const n = parseFloat(e.target.value.replace(”%”, “”).trim());
+if (!isNaN(n)) onChange((n >= 0 ? “+” : “”) + n.toFixed(2) + “%”);
 }}
-style={{
-background: “rgba(237,160,48,0.06)”, border: `1px solid rgba(237,160,48,0.25)`,
-color: G.amber, fontFamily: “inherit”, fontSize: 11.5, width: 76,
-padding: “3px 8px”, textAlign: “right”, outline: “none”, borderRadius: 1,
-}}
+style={{ background: “rgba(237,160,48,0.07)”, border: “1px solid rgba(237,160,48,0.3)”,
+color: C.amber, fontFamily: “inherit”, fontSize: 11, width: 72,
+padding: “2px 6px”, textAlign: “right”, outline: “none” }}
 />
 );
+} else if (!priceData) {
+dayEl = <span style={{ color: C.muted, fontSize: 10 }}>{loading ? “···” : “—”}</span>;
+} else if (!priceData.ok) {
+dayEl = <span style={{ color: C.muted, fontSize: 10 }}>N/A</span>;
 } else {
-const d = prices[h.ticker];
-if (!d) {
-dayEl = <span style={{ color: G.muted, fontSize: 10.5 }}>···</span>;
-} else if (d.error) {
-dayEl = <span style={{ color: G.muted, fontSize: 10.5 }}>N/A</span>;
-} else {
-const pct = d.changePercent;
-const color = pct > 0 ? G.green : pct < 0 ? G.red : G.muted;
-const sign  = pct >= 0 ? “+” : “”;
-dayEl = <span style={{ color, fontSize: 12.5, fontWeight: 500 }}>{sign}{pct.toFixed(2)}%</span>;
-}
+const col = priceData.pct > 0 ? C.green : priceData.pct < 0 ? C.red : C.muted;
+dayEl = <span style={{ color: col, fontSize: 12, fontWeight: 500 }}>{signed(priceData.pct)}</span>;
 }
 
-let contribEl;
-if (dayPct !== null) {
-const color = contrib > 0 ? G.green : contrib < 0 ? G.red : G.muted;
-const sign  = contrib >= 0 ? “+” : “”;
-contribEl = <span style={{ color, fontSize: 11.5 }}>{sign}{contrib.toFixed(3)}%</span>;
-} else {
-contribEl = <span style={{ color: G.muted }}>—</span>;
-}
+const contribEl = h.dayPct !== null
+? <span style={{ fontSize: 11, color: h.contrib > 0 ? C.green : h.contrib < 0 ? C.red : C.muted }}>
+{signed(h.contrib, 3)}
+</span>
+: <span style={{ color: C.muted }}>—</span>;
 
 return (
-<div
-onMouseEnter={() => setHover(true)}
-onMouseLeave={() => setHover(false)}
-style={{
-display: “grid”, gridTemplateColumns: “100px 1fr 72px 86px 100px 20px”,
-padding: “10px 14px”, borderBottom: `1px solid ${G.border}`,
-alignItems: “center”, position: “relative”, cursor: “default”,
-background: hover ? “rgba(255,255,255,0.02)” : “transparent”,
-transition: “background 0.1s”,
-}}
->
-{/* contribution bar */}
-<div style={{
-position: “absolute”, left: 0, top: 0, bottom: 0,
-width: barW + “%”, background: barColor, opacity: 0.055,
-pointerEvents: “none”, transition: “width 0.5s ease”,
-}} />
-
-```
-  {/* Ticker */}
-  <span style={{ fontWeight: 500, color: "#d8e6ee", fontSize: 11.5, letterSpacing: "0.03em",
-    display: "flex", alignItems: "center", gap: 5 }}>
-    {h.display}
-    {h.manual && (
-      <span style={{ fontSize: 8, background: "rgba(237,160,48,0.12)", color: G.amber,
-        border: `1px solid rgba(237,160,48,0.28)`, padding: "1px 4px", letterSpacing: "0.07em", borderRadius: 1 }}>
-        MAN
-      </span>
-    )}
-  </span>
-
-  {/* Issuer */}
-  <span style={{ color: G.label, fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis",
-    whiteSpace: "nowrap", paddingRight: 16 }} title={h.issuer}>
-    {h.issuer}
-  </span>
-
-  {/* Weight */}
-  <span style={{ textAlign: "right", color: G.muted, fontSize: 11.5 }}>
-    {(h.weight * 100).toFixed(2)}%
-  </span>
-
-  {/* Day % */}
-  <span style={{ textAlign: "right" }}>{dayEl}</span>
-
-  {/* Contribution */}
-  <span style={{ textAlign: "right" }}>{contribEl}</span>
-
-  {/* Arrow */}
-  <span style={{ textAlign: "right", fontSize: 9,
-    color: contrib > 0 ? G.green : contrib < 0 ? G.red : "transparent" }}>
-    {contrib > 0 ? "▲" : contrib < 0 ? "▼" : "·"}
-  </span>
+<div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+style={{ position: “relative”, borderBottom: `1px solid ${C.border}`,
+background: hover ? “rgba(255,255,255,0.018)” : “transparent”, transition: “background 0.1s” }}>
+<div style={{ position: “absolute”, left: 0, top: 0, bottom: 0, width: barW + “%”,
+background: barColor, opacity: 0.055, pointerEvents: “none” }} />
+<div style={{ display: “grid”, gridTemplateColumns: COLS, padding: “9px 12px”, alignItems: “center”, position: “relative” }}>
+<span style={{ display: “flex”, alignItems: “center”, gap: 4, fontWeight: 500, color: “#d8e6ee”, fontSize: 11 }}>
+{h.display}
+{h.manual && (
+<span style={{ fontSize: 7.5, background: “rgba(237,160,48,0.12)”, color: C.amber,
+border: “1px solid rgba(237,160,48,0.28)”, padding: “1px 3px”, letterSpacing: “0.06em” }}>MAN</span>
+)}
+</span>
+<span style={{ color: C.label, fontSize: 11, overflow: “hidden”, textOverflow: “ellipsis”,
+whiteSpace: “nowrap”, paddingRight: 10 }} title={h.issuer}>{h.issuer}</span>
+<span style={{ textAlign: “right”, color: C.muted, fontSize: 11 }}>{(h.weight * 100).toFixed(2)}%</span>
+<span style={{ textAlign: “right” }}>{dayEl}</span>
+<span style={{ textAlign: “right” }}>{contribEl}</span>
+<span style={{ textAlign: “right”, fontSize: 8, color: h.contrib > 0 ? C.green : h.contrib < 0 ? C.red : “transparent” }}>
+{h.contrib > 0 ? “▲” : “▼”}
+</span>
 </div>
-```
-
+</div>
 );
 }
