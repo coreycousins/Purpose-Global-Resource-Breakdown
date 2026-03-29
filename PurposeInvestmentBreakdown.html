@@ -505,7 +505,9 @@ margin-top: 16px;
 letter-spacing: 0.04em;
 }
 .modal-sector {
-margin-top: 10px;
+margin-top: 16px;
+padding-top: 14px;
+border-top: 1px solid var(--border);
 }
 
 /* ── Footer ── */
@@ -725,6 +727,21 @@ const holdings = [
   { ticker: null,     display: "MNU/U CN",  issuer: "Purpose USD Cash Mgmt Fund",   weight: 0.0108, manual: true,  sector: { label: "Cash",             cls: "cash"     }, desc: "Purpose Investments' short-duration US dollar fixed income ETF used for USD cash management within the fund. Invests primarily in high-quality, liquid US dollar money market instruments." },
   { ticker: "LTH.V",  display: "LTH CN",    issuer: "Lithium Ionic Corp",           weight: 0.0089, manual: false, sector: { label: "Lithium",          cls: "lithium"  }, desc: "Brazilian lithium developer advancing the Bandeira and Outro Lado hard-rock lithium projects in Minas Gerais, Brazil. Located in the prolific Eastern Brazilian Pegmatite Province, a world-class lithium district." },
 ];
+
+const SECTOR_DESCS = {
+  "Oil & Gas E&P":   "Exploration and production companies that find and extract crude oil and natural gas. Returns are driven by commodity prices, reserve growth, and production costs.",
+  "Refining":        "Companies that process crude oil into refined petroleum products such as gasoline, diesel, and jet fuel. Profitability is tied to the crack spread — the margin between crude input costs and refined product prices.",
+  "Integrated Oil":  "Vertically integrated energy companies spanning upstream production, midstream transport, and downstream refining and retail. Diversification across the value chain provides partial insulation from single-segment price swings.",
+  "Natural Gas":     "Companies focused on the production, liquefaction, or distribution of natural gas and LNG. Demand is driven by power generation, industrial use, and the global transition away from coal.",
+  "O&G Royalties":   "Companies that own mineral rights or royalty interests, earning passive income from oil and gas production without bearing operational or capital expenditure risk. Lower volatility than direct producers.",
+  "Energy Services": "Providers of equipment, technology, and services to the upstream oil and gas industry. Revenue is leveraged to drilling activity levels rather than commodity prices directly.",
+  "Silver Mining":   "Companies that mine and produce silver, often alongside base metals such as zinc and lead. Silver demand spans industrial applications, jewellery, and investment.",
+  "Gold Mining":     "Companies engaged in the exploration, development, and production of gold. Gold acts as a store of value and is sensitive to real interest rates, the US dollar, and risk-off sentiment.",
+  "Nickel Mining":   "Companies focused on the extraction of nickel, a key input for stainless steel and electric vehicle batteries. Demand is increasingly influenced by the EV supply chain.",
+  "Lithium":         "Companies involved in the exploration, development, or production of lithium, a critical mineral for electric vehicle batteries and grid-scale energy storage.",
+  "Cash":            "Short-duration cash or money market instruments held for liquidity management within the fund. Provides a buffer for redemptions and tactical redeployment.",
+  "Unlisted":        "Securities with no active public market. Positions are carried at internally determined fair value and are not subject to daily mark-to-market pricing.",
+};
 
 const manualValues = {};
 const priceData    = {};
@@ -999,7 +1016,9 @@ document.getElementById('modalTitle').textContent = h.issuer;
 document.getElementById('modalTicker').textContent = h.ticker ? h.ticker + '  ·  ' + h.display : h.display;
 document.getElementById('modalDesc').textContent = h.desc || 'No description available.';
 const sectorEl = document.getElementById('modalSector');
-sectorEl.innerHTML = '<span class="sector-tag ' + h.sector.cls + '">' + h.sector.label + '</span>';
+const sectorDesc = SECTOR_DESCS[h.sector.label] || '';
+sectorEl.innerHTML = '<span class="sector-tag ' + h.sector.cls + '">' + h.sector.label + '</span>'
+  + (sectorDesc ? '<p style="margin-top:8px;font-size:11px;color:var(--label);line-height:1.7;letter-spacing:0.01em">' + sectorDesc + '</p>' : '');
 document.getElementById('modalWeight').textContent = 'Portfolio weight: ' + (h.weight * 100).toFixed(2) + '%';
 const newsQuery = encodeURIComponent(h.issuer + (h.ticker ? ' ' + h.ticker : '') + ' recent news');
 document.getElementById('modalNewsLink').href = 'https://news.google.com/search?q=' + newsQuery;
