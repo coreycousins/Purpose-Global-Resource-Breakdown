@@ -543,14 +543,6 @@ letter-spacing: 0.02em;
 
 </head>
 <body>
-<!-- DEBUG PANEL -->
-<div id="debugPanel" style="background:#1a0a0a;border:2px solid #f25c5c;color:#f25c5c;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
-  <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
-    <span>DEBUG — expand to see debug info</span>
-    <span id="debugToggle" style="font-size:10px;opacity:0.6;">▼ expand</span>
-  </div>
-  <div id="debugBody" style="display:none;padding:0 16px 16px;line-height:1.8;white-space:pre-wrap;border-top:1px solid rgba(242,92,92,0.3);max-height:300px;overflow-y:auto;"></div>
-</div>
 <script>
 (function() {
   var log = [];
@@ -1001,6 +993,15 @@ render();
 fetchAll();
 });
 </script>
+
+<!-- DEBUG PANEL -->
+<div id="debugPanel" style="background:#1a1a1a;border:2px solid #888;color:#aaa;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
+  <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+    <span>DEBUG — expand to see debug info</span>
+    <span id="debugToggle" style="font-size:10px;opacity:0.6;">▼ expand</span>
+  </div>
+  <div id="debugBody" style="display:none;padding:0 16px 16px;line-height:1.8;white-space:pre-wrap;border-top:1px solid rgba(136,136,136,0.3);max-height:300px;overflow-y:auto;"></div>
+</div>
 
 </body>
 </html>
