@@ -733,7 +733,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <span data-col="ticker" onclick="setSort('ticker')">Ticker<span class="sort-arrow"></span></span>
     <span data-col="issuer" onclick="setSort('issuer')">Issuer<span class="sort-arrow"></span></span>
     <span data-col="sector" onclick="setSort('sector')">Sector<span class="sort-arrow"></span></span>
-    <span class="col-right" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"></span></span>
+    <span class="col-right sort-active" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"> ▼</span></span>
     <span class="col-right" data-col="daypct" onclick="setSort('daypct')">Day %<span class="sort-arrow"></span></span>
     <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
     <span></span>
@@ -843,14 +843,11 @@ function updateSectorSortHeaders() {
 }
 
 // ── Sort state ───────────────────────────────────────────────────────────────
-let sortCol = null; // null = original weight-desc order
+let sortCol = 'weight';
 let sortDir = -1;   // -1 = desc, 1 = asc
 
 function setSort(col) {
-if (col === 'weight') {
-  // Weight restores original order
-  sortCol = null;
-} else if (sortCol === col) {
+if (sortCol === col) {
   sortDir = -sortDir;
 } else {
   sortCol = col;
@@ -922,23 +919,22 @@ const computed = holdings.map((h, i) => {
   return { h, i, dayPct, contrib, dayHtml, contribHtml };
 });
 
-// 2. Sort (null dayPct rows go last regardless of direction)
+// 2. Sort
 const sorted = [...computed];
-if (sortCol) {
-  sorted.sort((a, b) => {
-    if (sortCol === 'ticker') return sortDir * a.h.display.localeCompare(b.h.display);
-    if (sortCol === 'issuer') return sortDir * a.h.issuer.localeCompare(b.h.issuer);
-    if (sortCol === 'sector') return sortDir * a.h.sector.label.localeCompare(b.h.sector.label);
-    if (sortCol === 'daypct') {
-      if (a.dayPct === null && b.dayPct === null) return 0;
-      if (a.dayPct === null) return 1;
-      if (b.dayPct === null) return -1;
-      return sortDir * (a.dayPct - b.dayPct);
-    }
-    if (sortCol === 'contrib') return sortDir * (a.contrib - b.contrib);
-    return 0;
-  });
-}
+sorted.sort((a, b) => {
+  if (sortCol === 'ticker') return sortDir * a.h.display.localeCompare(b.h.display);
+  if (sortCol === 'issuer') return sortDir * a.h.issuer.localeCompare(b.h.issuer);
+  if (sortCol === 'sector') return sortDir * a.h.sector.label.localeCompare(b.h.sector.label);
+  if (sortCol === 'weight') return sortDir * (a.h.weight - b.h.weight);
+  if (sortCol === 'daypct') {
+    if (a.dayPct === null && b.dayPct === null) return 0;
+    if (a.dayPct === null) return 1;
+    if (b.dayPct === null) return -1;
+    return sortDir * (a.dayPct - b.dayPct);
+  }
+  if (sortCol === 'contrib') return sortDir * (a.contrib - b.contrib);
+  return 0;
+});
 
 // Scale bars relative to the largest absolute contributor today.
 // The 0.10% floor prevents exaggeration on flat days (e.g. all contributions
@@ -1044,6 +1040,7 @@ sectors.forEach(s => {
   const row = document.createElement('div');
   row.className = 'sector-row' + (s.totalContrib > 0 ? ' contrib-pos' : s.totalContrib < 0 ? ' contrib-neg' : '');
   row.style.setProperty('--bar-w', Math.min(Math.abs(s.totalContrib) / maxAbs * 100, 100) + '%');
+  row.style.cursor = 'pointer';
   row.innerHTML = `
     <span><span class="sector-tag ${s.cls}">${s.label}</span><span style="font-size:9.5px;color:var(--muted);margin-left:6px;letter-spacing:0.03em">${(s.totalWeight * 100).toFixed(1)}% of fund</span></span>
     <span class="weight col-right">${(s.totalWeight * 100).toFixed(2)}%</span>
@@ -1051,6 +1048,7 @@ sectors.forEach(s => {
     <span class="contribution col-right ${hasCoverage ? contribCls : 'zero'}">${hasCoverage ? contribSign + s.totalContrib.toFixed(3) + '%' : '—'}</span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
   `;
+  row.addEventListener('click', function() { openSectorModal(s); });
   tbody.appendChild(row);
 });
 }
@@ -1181,12 +1179,25 @@ sectorEl.innerHTML = '<span class="sector-tag ' + h.sector.cls + '">' + h.sector
   + (sectorDesc ? '<p style="margin-top:8px;font-size:11px;color:var(--label);line-height:1.7;letter-spacing:0.01em">' + sectorDesc + '</p>' : '');
 document.getElementById('modalWeight').textContent = 'Portfolio weight: ' + (h.weight * 100).toFixed(2) + '%';
 const newsQuery = encodeURIComponent(h.issuer + (h.ticker ? ' ' + h.ticker : '') + ' recent news');
-document.getElementById('modalNewsLink').href = 'https://news.google.com/search?q=' + newsQuery;
+const newsLink = document.getElementById('modalNewsLink');
+newsLink.href = 'https://news.google.com/search?q=' + newsQuery;
+newsLink.style.display = '';
 document.getElementById('modalOverlay').classList.remove('hidden');
 }
 
 function closeModal() {
 document.getElementById('modalOverlay').classList.add('hidden');
+}
+
+function openSectorModal(s) {
+document.getElementById('modalTag').textContent = 'Sector';
+document.getElementById('modalTitle').textContent = s.label;
+document.getElementById('modalTicker').textContent = '';
+document.getElementById('modalDesc').textContent = SECTOR_DESCS[s.label] || 'No description available.';
+document.getElementById('modalSector').innerHTML = '<span class="sector-tag ' + s.cls + '">' + s.label + '</span>';
+document.getElementById('modalWeight').textContent = 'Total fund weight: ' + (s.totalWeight * 100).toFixed(2) + '%';
+document.getElementById('modalNewsLink').style.display = 'none';
+document.getElementById('modalOverlay').classList.remove('hidden');
 }
 
 document.addEventListener('keydown', function(e) {
