@@ -28,6 +28,7 @@ Each row shows one holding with:
 - **Issuer** — company name, with the Yahoo Finance ticker in brackets (e.g. `[TNZ.TO]`)
 - **Weight** — portfolio weight as a percentage
 - **Day %** — today's price change for the holding
+- **Sector** — sector classification for the holding (e.g. `Oil & Gas E&P`, `Silver Mining`, `Lithium`)
 - **Contrib** — weighted contribution to the fund's daily move (`weight × day%`)
 - **Bar** — visual bar scaled relative to the largest contributor today (minimum scale: 0.10%)
 
@@ -62,13 +63,14 @@ The entire application is a single self-contained HTML file (`PurposeInvestmentB
 Holdings are defined as a static JavaScript array near the top of the `<script>` block. Each entry has:
 
 ```js
-{ ticker: "TNZ.TO", display: "TNZ CN", issuer: "Tenaz Energy Corp", weight: 0.1886, manual: false, desc: "..." }
+{ ticker: "TNZ.TO", display: "TNZ CN", issuer: "Tenaz Energy Corp", weight: 0.1886, manual: false, sector: { label: "Oil & Gas E&P", cls: "energy" }, desc: "..." }
 ```
 
 - `ticker` — Yahoo Finance symbol used for price fetching (null for manual positions)
 - `display` — label shown in the table
 - `weight` — portfolio weight as a decimal (e.g. `0.1886` = 18.86%)
 - `manual` — if `true`, shows a text input instead of fetching a price
+- `sector` — object with `label` (display text) and `cls` (`energy` | `metals` | `lithium` | `cash` | `unlisted`) for colour-coding
 - `desc` — description shown in the holding detail popup
 
 ### Price Fetching (Yahoo Finance)
