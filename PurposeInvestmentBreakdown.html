@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v2.5</title>
+<title>Purpose Global Resources — Daily Attribution v2.6</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -505,12 +505,10 @@ letter-spacing: 0.02em;
 .header { flex-direction: column; align-items: flex-start; gap: 12px; }
 .header-right { align-items: flex-start; }
 
-/* Summary strip: 2×2 grid, hide Top Contributor and Top Drag */
+/* Summary strip: 2-col grid, all 6 items in 3 rows */
 .summary-card { grid-template-columns: 1fr 1fr; }
 .summary-divider { display: none; }
 .summary-item { padding: 14px 12px; min-width: 0 !important; }
-.summary-item:nth-child(5),
-.summary-item:nth-child(7) { display: none; }
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
@@ -587,7 +585,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.5</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.6</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
