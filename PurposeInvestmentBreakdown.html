@@ -512,6 +512,21 @@ padding-top: 14px;
 border-top: 1px solid var(--border);
 }
 
+/* ── Sector summary bar ── */
+.sector-summary {
+display: grid;
+grid-template-columns: 1fr 1px 1fr;
+background: var(--card-bg);
+border: 1px solid var(--border);
+margin-bottom: 10px;
+}
+.sector-summary-item {
+padding: 14px 18px;
+}
+.sector-summary-divider {
+background: var(--border);
+}
+
 /* ── Sector table ── */
 .sector-toggle-label {
 cursor: pointer;
@@ -718,6 +733,17 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <span id="sectorToggle" style="font-size:8px;opacity:0.55;margin-left:2px">▼ expand</span>
   </div>
   <div id="sectorPanel" style="display:none;margin-bottom:28px;">
+    <div class="sector-summary">
+      <div class="sector-summary-item">
+        <div class="summary-label">Top Contributing Sector</div>
+        <div class="top-label pos" id="sectorTopContrib">—</div>
+      </div>
+      <div class="sector-summary-divider"></div>
+      <div class="sector-summary-item">
+        <div class="summary-label">Top Drag Sector</div>
+        <div class="top-label neg" id="sectorTopDrag">—</div>
+      </div>
+    </div>
     <div class="sector-header-row" id="sectorHeaderRow">
       <span data-col="sector" onclick="setSectorSort('sector')">Sector<span class="sort-arrow"></span></span>
       <span class="col-right" data-col="weight" onclick="setSectorSort('weight')">Weight<span class="sort-arrow sort-active"> ▼</span></span>
@@ -1021,6 +1047,16 @@ computed.forEach(({ h, dayPct, contrib }) => {
 });
 
 const sectors = Object.values(map);
+
+// Top contributor / top drag by contribution (only covered sectors)
+const covered = sectors.filter(s => s.coveredWeight > 0);
+const topPos = covered.reduce((best, s) => s.totalContrib > (best?.totalContrib ?? -Infinity) ? s : best, null);
+const topNeg = covered.reduce((best, s) => s.totalContrib < (best?.totalContrib ??  Infinity) ? s : best, null);
+document.getElementById('sectorTopContrib').textContent =
+  topPos && topPos.totalContrib > 0 ? `${topPos.label}  +${topPos.totalContrib.toFixed(3)}%` : '—';
+document.getElementById('sectorTopDrag').textContent =
+  topNeg && topNeg.totalContrib < 0 ? `${topNeg.label}  ${topNeg.totalContrib.toFixed(3)}%` : '—';
+
 sectors.sort((a, b) => {
   if (sectorSortCol === 'sector')  return sectorSortDir * a.label.localeCompare(b.label);
   if (sectorSortCol === 'weight')  return sectorSortDir * (a.totalWeight - b.totalWeight);
