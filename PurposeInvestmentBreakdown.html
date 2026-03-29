@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v1.8</title>
+<title>Purpose Global Resources — Daily Attribution v1.9</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -509,7 +509,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v1.8</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v1.9</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
@@ -660,7 +660,7 @@ const arrowColor = contrib > 0 ? 'var(--green)' : contrib < 0 ? 'var(--red)' : '
 
 row.innerHTML = `
   <span class="ticker">${h.display}${h.manual ? '<span class="manual-tag">MAN</span>' : ''}</span>
-  <span class="issuer" title="${h.issuer}">${h.issuer}</span>
+  <span class="issuer" title="${h.issuer}">${h.issuer}${h.ticker ? ' <span style="color:var(--muted);font-size:10px">[' + h.ticker + ']</span>' : ''}</span>
   <span class="weight">${(h.weight * 100).toFixed(2)}%</span>
   <span style="text-align:right">${dayHtml}</span>
   <span style="text-align:right">${contribHtml}</span>
