@@ -716,11 +716,11 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <span id="sectorToggle" style="font-size:8px;opacity:0.55;margin-left:2px">▼ expand</span>
   </div>
   <div id="sectorPanel" style="display:none;margin-bottom:28px;">
-    <div class="sector-header-row">
-      <span>Sector</span>
-      <span class="col-right">Weight</span>
-      <span class="col-right">Day %</span>
-      <span class="col-right">Contribution</span>
+    <div class="sector-header-row" id="sectorHeaderRow">
+      <span data-col="sector" onclick="setSectorSort('sector')">Sector<span class="sort-arrow"></span></span>
+      <span class="col-right" data-col="weight" onclick="setSectorSort('weight')">Weight<span class="sort-arrow sort-active"> ▼</span></span>
+      <span class="col-right" data-col="daypct" onclick="setSectorSort('daypct')">Day %<span class="sort-arrow"></span></span>
+      <span class="col-right" data-col="contrib" onclick="setSectorSort('contrib')">Contribution<span class="sort-arrow"></span></span>
       <span></span>
     </div>
     <div id="sectorTable"></div>
@@ -816,6 +816,30 @@ function toggleSectors() {
   sectorsExpanded = !sectorsExpanded;
   document.getElementById('sectorPanel').style.display = sectorsExpanded ? 'block' : 'none';
   document.getElementById('sectorToggle').textContent  = sectorsExpanded ? '▲ collapse' : '▼ expand';
+}
+
+// ── Sector sort state ────────────────────────────────────────────────────────
+let sectorSortCol = 'weight'; // default: weight descending
+let sectorSortDir = -1;
+
+function setSectorSort(col) {
+  if (sectorSortCol === col) {
+    sectorSortDir = -sectorSortDir;
+  } else {
+    sectorSortCol = col;
+    sectorSortDir = col === 'sector' ? 1 : -1;
+  }
+  updateSectorSortHeaders();
+  // Re-render with last computed data stored on window
+  if (window._lastComputed) renderSectors(window._lastComputed);
+}
+
+function updateSectorSortHeaders() {
+  document.querySelectorAll('#sectorHeaderRow [data-col]').forEach(el => {
+    const active = el.dataset.col === sectorSortCol;
+    el.classList.toggle('sort-active', active);
+    el.querySelector('.sort-arrow').textContent = active ? (sectorSortDir === 1 ? ' ▲' : ' ▼') : '';
+  });
 }
 
 // ── Sort state ───────────────────────────────────────────────────────────────
@@ -971,6 +995,8 @@ renderSectors(computed);
 
 // ── Sector Attribution ───────────────────────────────────────────────────────
 function renderSectors(computed) {
+window._lastComputed = computed;
+
 // Aggregate by sector label
 const map = {};
 computed.forEach(({ h, dayPct, contrib }) => {
@@ -984,8 +1010,21 @@ computed.forEach(({ h, dayPct, contrib }) => {
 });
 
 const sectors = Object.values(map);
-// Sort by largest absolute contribution first
-sectors.sort((a, b) => Math.abs(b.totalContrib) - Math.abs(a.totalContrib));
+sectors.sort((a, b) => {
+  if (sectorSortCol === 'sector')  return sectorSortDir * a.label.localeCompare(b.label);
+  if (sectorSortCol === 'weight')  return sectorSortDir * (a.totalWeight - b.totalWeight);
+  if (sectorSortCol === 'daypct') {
+    const aAvg = a.coveredWeight > 0 ? a.totalContrib / a.coveredWeight : null;
+    const bAvg = b.coveredWeight > 0 ? b.totalContrib / b.coveredWeight : null;
+    if (aAvg === null && bAvg === null) return 0;
+    if (aAvg === null) return 1;
+    if (bAvg === null) return -1;
+    return sectorSortDir * (aAvg - bAvg);
+  }
+  if (sectorSortCol === 'contrib') return sectorSortDir * (a.totalContrib - b.totalContrib);
+  return 0;
+});
+updateSectorSortHeaders();
 
 const maxAbs = Math.max(...sectors.map(s => Math.abs(s.totalContrib)), 0.10);
 
