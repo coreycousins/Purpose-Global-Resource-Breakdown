@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v2.10</title>
+<title>Purpose Global Resources — Daily Attribution v2.11</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -290,7 +290,7 @@ background: var(--border);
 
 .table-header-row {
 display: grid;
-grid-template-columns: 100px 1fr 110px 76px 88px 100px 24px;
+grid-template-columns: 100px 1fr 110px 76px 88px 100px 90px 24px;
 padding: 7px 14px;
 font-size: 9.5px;
 letter-spacing: 0.12em;
@@ -312,7 +312,7 @@ user-select: none;
 
 .holding-row {
 display: grid;
-grid-template-columns: 100px 1fr 110px 76px 88px 100px 24px;
+grid-template-columns: 100px 1fr 110px 76px 88px 100px 90px 24px;
 padding: 10px 14px;
 border-bottom: 1px solid var(--border);
 align-items: center;
@@ -537,7 +537,7 @@ user-select: none;
 .sector-header-row,
 .sector-row {
 display: grid;
-grid-template-columns: 1fr 76px 88px 100px 24px;
+grid-template-columns: 1fr 76px 88px 100px 90px 24px;
 padding: 7px 14px;
 align-items: center;
 }
@@ -565,14 +565,64 @@ opacity: 0;
 .sector-row.contrib-neg::before { background: var(--red);   opacity: 0.055; }
 .sector-row:hover { background: rgba(255,255,255,0.022); }
 
-@media (max-width: 640px) {
-.sector-header-row,
-.sector-row { grid-template-columns: 1fr 58px 70px; }
-.sector-header-row span:nth-child(2),
-.sector-header-row span:nth-child(5),
-.sector-row > span:nth-child(2),
-.sector-row > span:nth-child(5) { display: none; }
+
+/* ── Position bar ── */
+.position-bar {
+display: flex;
+align-items: center;
+gap: 0;
+background: var(--card-bg);
+border: 1px solid var(--border);
+margin-bottom: 20px;
+flex-wrap: wrap;
 }
+.position-field {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 14px 18px;
+}
+.position-divider {
+width: 1px;
+background: var(--border);
+align-self: stretch;
+}
+.position-item {
+padding: 14px 18px;
+}
+.position-label {
+font-size: 9.5px;
+letter-spacing: 0.14em;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 6px;
+}
+.position-input {
+background: rgba(77,175,207,0.06);
+border: 1px solid rgba(77,175,207,0.22);
+color: var(--accent);
+font-family: 'DM Mono', monospace;
+font-size: 13px;
+width: 100px;
+padding: 4px 10px;
+outline: none;
+border-radius: 1px;
+transition: border-color 0.15s, background 0.15s;
+}
+.position-input:focus {
+border-color: rgba(77,175,207,0.5);
+background: rgba(77,175,207,0.09);
+}
+.position-input::placeholder { color: rgba(77,175,207,0.3); }
+.position-value {
+font-family: 'Fraunces', serif;
+font-size: 20px;
+font-weight: 200;
+letter-spacing: -0.02em;
+color: var(--text);
+}
+.position-value.positive { color: var(--green); }
+.position-value.negative { color: var(--red); }
 
 /* ── Footer ── */
 .footer-note {
@@ -610,16 +660,28 @@ letter-spacing: 0.02em;
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
-/* Holdings table: hide Sector, Weight and arrow columns */
+/* Holdings table: hide Sector, Weight, CAD move and arrow columns */
 .table-header-row,
 .holding-row { grid-template-columns: 70px 1fr 58px 70px; font-size: 11px; }
 .table-header-row span:nth-child(3),
 .table-header-row span:nth-child(4),
 .table-header-row span:nth-child(7),
+.table-header-row span:nth-child(8),
 .holding-row > span:nth-child(3),
 .holding-row > span:nth-child(4),
-.holding-row > span:nth-child(7) { display: none; }
+.holding-row > span:nth-child(7),
+.holding-row > span:nth-child(8) { display: none; }
 .manual-input { width: 54px; font-size: 10px; padding: 3px 5px; }
+
+/* Sector table: hide Weight, CAD move and arrow columns */
+.sector-header-row,
+.sector-row { grid-template-columns: 1fr 58px 70px; }
+.sector-header-row span:nth-child(2),
+.sector-header-row span:nth-child(5),
+.sector-header-row span:nth-child(6),
+.sector-row > span:nth-child(2),
+.sector-row > span:nth-child(5),
+.sector-row > span:nth-child(6) { display: none; }
 
 /* Debug panel */
 #debugPanel { margin: 8px; }
@@ -677,11 +739,32 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.10</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.11</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
       <button class="refresh-btn" id="refreshBtn" onclick="fetchAll()">↻ Refresh Prices</button>
+    </div>
+  </div>
+
+  <!-- Position -->
+
+  <div class="position-bar">
+    <div class="position-field">
+      <div>
+        <div class="position-label">Shares Held</div>
+        <input class="position-input" id="sharesInput" type="number" min="0" placeholder="0" oninput="onSharesInput(this.value)">
+      </div>
+    </div>
+    <div class="position-divider"></div>
+    <div class="position-item">
+      <div class="position-label">Total Value</div>
+      <div class="position-value" id="positionValue">—</div>
+    </div>
+    <div class="position-divider"></div>
+    <div class="position-item">
+      <div class="position-label">Est. Daily Move</div>
+      <div class="position-value" id="positionMove">—</div>
     </div>
   </div>
 
@@ -749,6 +832,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <span class="col-right" data-col="weight" onclick="setSectorSort('weight')">Weight<span class="sort-arrow sort-active"> ▼</span></span>
       <span class="col-right" data-col="daypct" onclick="setSectorSort('daypct')">Day %<span class="sort-arrow"></span></span>
       <span class="col-right" data-col="contrib" onclick="setSectorSort('contrib')">Contribution<span class="sort-arrow"></span></span>
+      <span class="col-right">CAD Move</span>
       <span></span>
     </div>
     <div id="sectorTable"></div>
@@ -764,6 +848,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <span class="col-right sort-active" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"> ▼</span></span>
     <span class="col-right" data-col="daypct" onclick="setSort('daypct')">Day %<span class="sort-arrow"></span></span>
     <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
+    <span class="col-right">CAD Move</span>
     <span></span>
   </div>
   <div id="holdingsTable"></div>
@@ -850,6 +935,44 @@ const SECTOR_NEWS = {
 
 const manualValues = {};
 const priceData    = {};
+
+// ── Position tracking ────────────────────────────────────────────────────────
+let sharesHeld = parseFloat(localStorage.getItem('sharesHeld')) || 0;
+let navPrice   = null;
+
+function onSharesInput(val) {
+  sharesHeld = parseFloat(val) || 0;
+  localStorage.setItem('sharesHeld', sharesHeld);
+  render();
+}
+
+function formatCAD(val) {
+  const abs = Math.abs(val).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (val >= 0 ? '+$' : '-$') + abs;
+}
+
+function cadMove(contribPct) {
+  if (!sharesHeld || !navPrice) return null;
+  return sharesHeld * navPrice * (contribPct / 100);
+}
+
+function updatePositionBar(totalContrib) {
+  const valueEl = document.getElementById('positionValue');
+  const moveEl  = document.getElementById('positionMove');
+  if (!sharesHeld || !navPrice) {
+    valueEl.textContent = '—';
+    valueEl.className = 'position-value';
+    moveEl.textContent  = '—';
+    moveEl.className = 'position-value';
+    return;
+  }
+  const totalValue = sharesHeld * navPrice;
+  valueEl.textContent = '$' + totalValue.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  valueEl.className = 'position-value';
+  const move = sharesHeld * navPrice * (totalContrib / 100);
+  moveEl.textContent = formatCAD(move);
+  moveEl.className = 'position-value' + (move > 0 ? ' positive' : move < 0 ? ' negative' : '');
+}
 
 // ── Sector panel toggle ──────────────────────────────────────────────────────
 let sectorsExpanded = false;
@@ -994,6 +1117,11 @@ sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml }) => {
   const arrow = contrib > 0 ? '▲' : contrib < 0 ? '▼' : '';
   const arrowColor = contrib > 0 ? 'var(--green)' : contrib < 0 ? 'var(--red)' : 'transparent';
 
+  const holdingCAD = cadMove(contrib);
+  const cadCls  = holdingCAD > 0 ? 'pos' : holdingCAD < 0 ? 'neg' : 'zero';
+  const cadHtml = holdingCAD !== null && dayPct !== null
+    ? `<span class="contribution ${cadCls}" style="font-size:11px">${formatCAD(holdingCAD)}</span>`
+    : `<span class="contribution zero">—</span>`;
   row.innerHTML = `
     <span class="ticker">${h.display}${h.manual ? '<span class="manual-tag">MAN</span>' : ''}</span>
     <span class="issuer" title="${h.issuer}">${h.issuer}${h.ticker ? ' <span style="color:var(--muted);font-size:10px">[' + h.ticker + ']</span>' : ''}</span>
@@ -1001,6 +1129,7 @@ sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml }) => {
     <span class="weight">${(h.weight * 100).toFixed(2)}%</span>
     <span style="text-align:right">${dayHtml}</span>
     <span style="text-align:right">${contribHtml}</span>
+    <span style="text-align:right">${cadHtml}</span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
   `;
   row.style.cursor = 'pointer';
@@ -1027,6 +1156,7 @@ topPos.label ? `${topPos.label}  +${topPos.contrib.toFixed(3)}%` : '—';
 document.getElementById('topDrag').textContent =
 topNeg.label ? `${topNeg.label}  ${topNeg.contrib.toFixed(3)}%` : '—';
 
+updatePositionBar(totalContrib);
 renderSectors(computed);
 }
 
@@ -1092,11 +1222,14 @@ sectors.forEach(s => {
   row.className = 'sector-row' + (s.totalContrib > 0 ? ' contrib-pos' : s.totalContrib < 0 ? ' contrib-neg' : '');
   row.style.setProperty('--bar-w', Math.min(Math.abs(s.totalContrib) / maxAbs * 100, 100) + '%');
   row.style.cursor = 'pointer';
+  const sectorCAD = hasCoverage ? cadMove(s.totalContrib) : null;
+  const sectorCADCls = sectorCAD > 0 ? 'pos' : sectorCAD < 0 ? 'neg' : 'zero';
   row.innerHTML = `
     <span><span class="sector-tag ${s.cls}">${s.label}</span><span style="font-size:9.5px;color:var(--muted);margin-left:6px;letter-spacing:0.03em">${(s.totalWeight * 100).toFixed(1)}% of fund</span></span>
     <span class="weight col-right">${(s.totalWeight * 100).toFixed(2)}%</span>
     <span class="day-change col-right ${hasCoverage ? avgCls : 'loading'}">${hasCoverage ? avgSign + avgDayPct.toFixed(2) + '%' : '···'}</span>
     <span class="contribution col-right ${hasCoverage ? contribCls : 'zero'}">${hasCoverage ? contribSign + s.totalContrib.toFixed(3) + '%' : '—'}</span>
+    <span class="contribution col-right ${sectorCAD !== null ? sectorCADCls : 'zero'}" style="font-size:11px">${sectorCAD !== null ? formatCAD(sectorCAD) : '—'}</span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
   `;
   row.addEventListener('click', function() { openSectorModal(s); });
@@ -1202,6 +1335,8 @@ const quote = JSON.parse(match[1]);
 const nav = parseFloat(quote.lastPrice);
 const pct = parseFloat(String(quote.percentChange).replace('%', ''));
 if (isNaN(nav) || isNaN(pct)) throw new Error('invalid data');
+navPrice = nav;
+render(); // refresh CAD columns now that NAV is known
 const navEl = document.getElementById('fundNAV');
 const moveEl = document.getElementById('reportedMove');
 const dateEl = document.getElementById('navDate');
@@ -1263,6 +1398,7 @@ if (e.key === 'Escape') closeModal();
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+if (sharesHeld) document.getElementById('sharesInput').value = sharesHeld;
 render();
 fetchAll();
 });
