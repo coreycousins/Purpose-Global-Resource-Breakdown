@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v1.3</title>
+<title>Purpose Global Resources — Daily Attribution v1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -675,12 +675,11 @@ topNeg.label ? `${topNeg.label}  ${topNeg.contrib.toFixed(3)}%` : '—';
 // ── Price fetch ──────────────────────────────────────────────────────────────
 async function fetchQuote(ticker) {
 const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
+const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
 try {
 const r = await fetch(proxyUrl);
 if (!r.ok) throw new Error('HTTP ' + r.status);
-const wrapper = await r.json();
-const j = JSON.parse(wrapper.contents);
+const j = await r.json();
 const meta = j?.chart?.result?.[0]?.meta;
 if (!meta) throw new Error('no meta');
 const prev  = meta.chartPreviousClose || meta.previousClose;
