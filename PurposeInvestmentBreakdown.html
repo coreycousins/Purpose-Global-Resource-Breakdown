@@ -304,8 +304,10 @@ margin-bottom: 2px;
 cursor: pointer;
 user-select: none;
 }
-.table-header-row span[data-col]:hover { color: var(--text); }
-.table-header-row span[data-col].sort-active { color: var(--accent); }
+.table-header-row span[data-col]:hover,
+.sector-header-row span[data-col]:hover { color: var(--text); }
+.table-header-row span[data-col].sort-active,
+.sector-header-row span[data-col].sort-active { color: var(--accent); }
 .sort-arrow { font-size: 8px; }
 
 .holding-row {
