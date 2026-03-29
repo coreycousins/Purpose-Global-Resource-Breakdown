@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v1.5</title>
+<title>Purpose Global Resources — Daily Attribution v1.6</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -451,19 +451,33 @@ grid-template-rows: auto auto;
 </head>
 <body>
 <!-- DEBUG PANEL -->
-<div id="debugPanel" style="background:#1a0a0a;border:2px solid #f25c5c;color:#f25c5c;font-family:monospace;font-size:12px;padding:16px;margin:16px;line-height:1.8;white-space:pre-wrap;z-index:9999;position:relative;">
-DEBUG LOG — loading...
+<div id="debugPanel" style="background:#1a0a0a;border:2px solid #f25c5c;color:#f25c5c;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
+  <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+    <span>DEBUG <span id="debugSummary">loading...</span></span>
+    <span id="debugToggle" style="font-size:10px;opacity:0.6;">▼ expand</span>
+  </div>
+  <div id="debugBody" style="display:none;padding:0 16px 16px;line-height:1.8;white-space:pre-wrap;border-top:1px solid rgba(242,92,92,0.3);max-height:300px;overflow-y:auto;"></div>
 </div>
 <script>
 (function() {
   var log = [];
+  var expanded = false;
   function dbg(msg) {
     log.push(msg);
-    var el = document.getElementById('debugPanel');
-    if (el) el.textContent = log.join('\n');
+    var summary = document.getElementById('debugSummary');
+    var body = document.getElementById('debugBody');
+    if (summary) summary.textContent = log[log.length - 1];
+    if (body) body.textContent = log.join('\n');
     console.log('[DBG]', msg);
   }
   window.dbg = dbg;
+  window.toggleDebug = function() {
+    expanded = !expanded;
+    var body = document.getElementById('debugBody');
+    var toggle = document.getElementById('debugToggle');
+    if (body) body.style.display = expanded ? 'block' : 'none';
+    if (toggle) toggle.textContent = expanded ? '▲ collapse' : '▼ expand';
+  };
 
 dbg('1. Inline debug script running. readyState=' + document.readyState);
 
@@ -495,7 +509,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v1.5</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v1.6</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
