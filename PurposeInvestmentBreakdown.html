@@ -300,6 +300,13 @@ border-bottom: 1px solid var(--border);
 margin-bottom: 2px;
 }
 .col-right { text-align: right; }
+.table-header-row span[data-col] {
+cursor: pointer;
+user-select: none;
+}
+.table-header-row span[data-col]:hover { color: var(--text); }
+.table-header-row span[data-col].sort-active { color: var(--accent); }
+.sort-arrow { font-size: 8px; }
 
 .holding-row {
 display: grid;
@@ -645,12 +652,12 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
   <!-- Table -->
 
   <div class="section-label">Holdings</div>
-  <div class="table-header-row">
-    <span>Ticker</span>
-    <span>Issuer</span>
-    <span class="col-right">Weight</span>
-    <span class="col-right">Day %</span>
-    <span class="col-right">Contribution</span>
+  <div class="table-header-row" id="holdingsHeader">
+    <span data-col="ticker" onclick="setSort('ticker')">Ticker<span class="sort-arrow"></span></span>
+    <span data-col="issuer" onclick="setSort('issuer')">Issuer<span class="sort-arrow"></span></span>
+    <span class="col-right" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"></span></span>
+    <span class="col-right" data-col="daypct" onclick="setSort('daypct')">Day %<span class="sort-arrow"></span></span>
+    <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
     <span></span>
   </div>
   <div id="holdingsTable"></div>
@@ -708,6 +715,33 @@ const holdings = [
 const manualValues = {};
 const priceData    = {};
 
+// ── Sort state ───────────────────────────────────────────────────────────────
+let sortCol = null; // null = original weight-desc order
+let sortDir = -1;   // -1 = desc, 1 = asc
+
+function setSort(col) {
+if (col === 'weight') {
+  // Weight restores original order
+  sortCol = null;
+} else if (sortCol === col) {
+  sortDir = -sortDir;
+} else {
+  sortCol = col;
+  sortDir = (col === 'ticker' || col === 'issuer') ? 1 : -1;
+}
+updateSortHeaders();
+render();
+}
+
+function updateSortHeaders() {
+document.querySelectorAll('#holdingsHeader [data-col]').forEach(el => {
+  const col = el.dataset.col;
+  const active = col === sortCol;
+  el.classList.toggle('sort-active', active);
+  el.querySelector('.sort-arrow').textContent = active ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
+});
+}
+
 // ── Render ──────────────────────────────────────────────────────────────────
 function render() {
 const tbody = document.getElementById('holdingsTable');
@@ -717,82 +751,99 @@ let totalContrib = 0, coveredWeight = 0;
 let topPos = { contrib: -Infinity, label: null };
 let topNeg = { contrib:  Infinity, label: null };
 
-const rowContribs = [];
+// 1. Compute per-holding data
+const computed = holdings.map((h, i) => {
+  let dayPct = null;
+  let dayHtml = '', contribHtml = '';
+  let contrib = 0;
 
-holdings.forEach((h, i) => {
-const row = document.createElement('div');
-row.className = 'holding-row';
-
-let dayPct = null;
-let dayHtml = '', contribHtml = '';
-let contrib = 0;
-
-if (h.manual) {
-  const val = manualValues[h.display] || '';
-  dayHtml = `<input class="manual-input" id="mi-${i}" type="text"
-    placeholder="±0.00%" value="${val}"
-    oninput="onManualInput(${i},this.value)"
-    onblur="onManualBlur(${i},this.value)">`;
-  const p = parseManual(val);
-  if (p !== null) { dayPct = p; coveredWeight += h.weight; }
-} else {
-  const d = priceData[h.ticker];
-  if (!d) {
-    dayHtml = `<span class="day-change loading">···</span>`;
-  } else if (d.error) {
-    dayHtml = `<span class="day-change loading">N/A</span>`;
+  if (h.manual) {
+    const val = manualValues[h.display] || '';
+    dayHtml = `<input class="manual-input" id="mi-${i}" type="text"
+      placeholder="±0.00%" value="${val}"
+      oninput="onManualInput(${i},this.value)"
+      onblur="onManualBlur(${i},this.value)">`;
+    const p = parseManual(val);
+    if (p !== null) { dayPct = p; coveredWeight += h.weight; }
   } else {
-    dayPct = d.changePercent;
-    const sign = dayPct >= 0 ? '+' : '';
-    const cls  = dayPct > 0 ? 'pos' : dayPct < 0 ? 'neg' : 'zero';
-    dayHtml = `<span class="day-change ${cls}">${sign}${dayPct.toFixed(2)}%</span>`;
-    coveredWeight += h.weight;
+    const d = priceData[h.ticker];
+    if (!d) {
+      dayHtml = `<span class="day-change loading">···</span>`;
+    } else if (d.error) {
+      dayHtml = `<span class="day-change loading">N/A</span>`;
+    } else {
+      dayPct = d.changePercent;
+      const sign = dayPct >= 0 ? '+' : '';
+      const cls  = dayPct > 0 ? 'pos' : dayPct < 0 ? 'neg' : 'zero';
+      dayHtml = `<span class="day-change ${cls}">${sign}${dayPct.toFixed(2)}%</span>`;
+      coveredWeight += h.weight;
+    }
   }
-}
 
-if (dayPct !== null) {
-  contrib = h.weight * dayPct;
-  totalContrib += contrib;
-  const sign = contrib >= 0 ? '+' : '';
-  const cls  = contrib > 0 ? 'pos' : contrib < 0 ? 'neg' : 'zero';
-  contribHtml = `<span class="contribution ${cls}">${sign}${contrib.toFixed(3)}%</span>`;
-  if (contrib > topPos.contrib) topPos = { contrib, label: h.display };
-  if (contrib < topNeg.contrib) topNeg = { contrib, label: h.display };
-} else {
-  contribHtml = `<span class="contribution zero">—</span>`;
-}
+  if (dayPct !== null) {
+    contrib = h.weight * dayPct;
+    totalContrib += contrib;
+    const sign = contrib >= 0 ? '+' : '';
+    const cls  = contrib > 0 ? 'pos' : contrib < 0 ? 'neg' : 'zero';
+    contribHtml = `<span class="contribution ${cls}">${sign}${contrib.toFixed(3)}%</span>`;
+    if (contrib > topPos.contrib) topPos = { contrib, label: h.display };
+    if (contrib < topNeg.contrib) topNeg = { contrib, label: h.display };
+  } else {
+    contribHtml = `<span class="contribution zero">—</span>`;
+  }
 
-if (contrib > 0) row.classList.add('contrib-pos');
-if (contrib < 0) row.classList.add('contrib-neg');
-rowContribs.push({ row, contrib });
-
-const arrow = contrib > 0 ? '▲' : contrib < 0 ? '▼' : '';
-const arrowColor = contrib > 0 ? 'var(--green)' : contrib < 0 ? 'var(--red)' : 'transparent';
-
-row.innerHTML = `
-  <span class="ticker">${h.display}${h.manual ? '<span class="manual-tag">MAN</span>' : ''}</span>
-  <span class="issuer" title="${h.issuer}">${h.issuer}${h.ticker ? ' <span style="color:var(--muted);font-size:10px">[' + h.ticker + ']</span>' : ''}</span>
-  <span class="weight">${(h.weight * 100).toFixed(2)}%</span>
-  <span style="text-align:right">${dayHtml}</span>
-  <span style="text-align:right">${contribHtml}</span>
-  <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
-`;
-row.style.cursor = 'pointer';
-row.addEventListener('click', function(e) {
-  if (e.target.tagName === 'INPUT') return;
-  openModal(h);
+  return { h, i, dayPct, contrib, dayHtml, contribHtml };
 });
-tbody.appendChild(row);
 
-});
+// 2. Sort (null dayPct rows go last regardless of direction)
+const sorted = [...computed];
+if (sortCol) {
+  sorted.sort((a, b) => {
+    if (sortCol === 'ticker') return sortDir * a.h.display.localeCompare(b.h.display);
+    if (sortCol === 'issuer') return sortDir * a.h.issuer.localeCompare(b.h.issuer);
+    if (sortCol === 'daypct') {
+      if (a.dayPct === null && b.dayPct === null) return 0;
+      if (a.dayPct === null) return 1;
+      if (b.dayPct === null) return -1;
+      return sortDir * (a.dayPct - b.dayPct);
+    }
+    if (sortCol === 'contrib') return sortDir * (a.contrib - b.contrib);
+    return 0;
+  });
+}
 
 // Scale bars relative to the largest absolute contributor today.
 // The 0.10% floor prevents exaggeration on flat days (e.g. all contributions
 // are 0.01% — without a floor the top contributor would still fill 100%).
-const maxAbsContrib = Math.max(...rowContribs.map(r => Math.abs(r.contrib)));
+const maxAbsContrib = Math.max(...computed.map(r => Math.abs(r.contrib)));
 const barScale = Math.max(maxAbsContrib, 0.10);
-rowContribs.forEach(({ row, contrib }) => {
+
+// 3. Render sorted rows
+sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml }) => {
+  const row = document.createElement('div');
+  row.className = 'holding-row';
+
+  if (contrib > 0) row.classList.add('contrib-pos');
+  if (contrib < 0) row.classList.add('contrib-neg');
+
+  const arrow = contrib > 0 ? '▲' : contrib < 0 ? '▼' : '';
+  const arrowColor = contrib > 0 ? 'var(--green)' : contrib < 0 ? 'var(--red)' : 'transparent';
+
+  row.innerHTML = `
+    <span class="ticker">${h.display}${h.manual ? '<span class="manual-tag">MAN</span>' : ''}</span>
+    <span class="issuer" title="${h.issuer}">${h.issuer}${h.ticker ? ' <span style="color:var(--muted);font-size:10px">[' + h.ticker + ']</span>' : ''}</span>
+    <span class="weight">${(h.weight * 100).toFixed(2)}%</span>
+    <span style="text-align:right">${dayHtml}</span>
+    <span style="text-align:right">${contribHtml}</span>
+    <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
+  `;
+  row.style.cursor = 'pointer';
+  row.addEventListener('click', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    openModal(h);
+  });
   row.style.setProperty('--bar-w', Math.min(Math.abs(contrib) / barScale * 100, 100) + '%');
+  tbody.appendChild(row);
 });
 
 // Summary
