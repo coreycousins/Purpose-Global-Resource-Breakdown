@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v2.0</title>
+<title>Purpose Global Resources — Daily Attribution v2.2</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -166,7 +166,7 @@ border: 1px solid var(--border);
 padding: 0;
 margin-bottom: 36px;
 display: grid;
-grid-template-columns: auto 1px 1fr 1px auto 1px auto;
+grid-template-columns: auto 1px 1fr 1px auto 1px auto 1px auto 1px auto;
 align-items: stretch;
 overflow: hidden;
 }
@@ -413,6 +413,77 @@ background: rgba(237,160,48,0.09);
 }
 .manual-input::placeholder { color: rgba(237,160,48,0.3); }
 
+/* ── Modal ── */
+.modal-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,0.65);
+z-index: 1000;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 24px;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal-box {
+background: var(--surface);
+border: 1px solid var(--border-light);
+max-width: 480px;
+width: 100%;
+padding: 28px 32px 24px;
+position: relative;
+animation: fadeUp 0.15s ease both;
+}
+
+.modal-close {
+position: absolute;
+top: 14px;
+right: 16px;
+background: none;
+border: none;
+color: var(--muted);
+font-size: 18px;
+cursor: pointer;
+line-height: 1;
+padding: 2px 6px;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal-tag {
+font-size: 9px;
+letter-spacing: 0.18em;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 8px;
+}
+.modal-title {
+font-family: 'Fraunces', serif;
+font-size: 22px;
+font-weight: 200;
+color: #dde8ee;
+margin-bottom: 4px;
+}
+.modal-ticker {
+font-size: 10.5px;
+color: var(--accent);
+letter-spacing: 0.06em;
+margin-bottom: 18px;
+}
+.modal-desc {
+font-size: 12px;
+color: var(--label);
+line-height: 1.8;
+border-top: 1px solid var(--border);
+padding-top: 16px;
+}
+.modal-weight {
+font-size: 10px;
+color: var(--muted);
+margin-top: 16px;
+letter-spacing: 0.04em;
+}
+
 /* ── Footer ── */
 .footer-note {
 margin-top: 28px;
@@ -432,8 +503,12 @@ grid-template-rows: auto auto;
 }
 .summary-item:nth-child(5),
 .summary-item:nth-child(7),
+.summary-item:nth-child(9),
+.summary-item:nth-child(11),
 .summary-divider:nth-child(4),
-.summary-divider:nth-child(6) { display: none; }
+.summary-divider:nth-child(6),
+.summary-divider:nth-child(8),
+.summary-divider:nth-child(10) { display: none; }
 
 .table-header-row,
 .holding-row {
@@ -509,7 +584,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.0</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.2</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
@@ -543,6 +618,17 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <div class="summary-label">Top Drag</div>
       <div class="top-label neg" id="topDrag">—</div>
     </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="summary-label">Fund NAV</div>
+      <div class="summary-value neutral" id="fundNAV">—</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:0.04em" id="navDate"></div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="summary-label">Reported Move</div>
+      <div class="summary-value neutral" id="reportedMove">—</div>
+    </div>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
@@ -567,32 +653,45 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
   </div>
 
 </div>
+
+<!-- Holding detail modal -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-tag" id="modalTag"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-ticker" id="modalTicker"></div>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-weight" id="modalWeight"></div>
+  </div>
+</div>
+
 <script>
 // ── Holdings ────────────────────────────────────────────────────────────────
 const holdings = [
-  { ticker: "TNZ.TO", display: "TNZ CN",    issuer: "Tenaz Energy Corp",            weight: 0.1886, manual: false },
-  { ticker: "VLO",    display: "VLO US",    issuer: "Valero Energy Corp",           weight: 0.1136, manual: false },
-  { ticker: "MPC",    display: "MPC US",    issuer: "Marathon Petroleum Corp",      weight: 0.0984, manual: false },
-  { ticker: "SOC",    display: "SOC US",    issuer: "Sable Offshore Corp",          weight: 0.0529, manual: false },
-  { ticker: "SVM",    display: "SVM CN",    issuer: "Silvercorp Metals Inc",        weight: 0.0491, manual: false },
-  { ticker: null,     display: "{cash}",    issuer: "CAD Cash",                     weight: 0.0442, manual: true  },
-  { ticker: "LAR",    display: "LAR US",    issuer: "Lithium Argentina AG",         weight: 0.0393, manual: false },
-  { ticker: "SU.TO",  display: "SU CN",     issuer: "Suncor Energy Inc",            weight: 0.0366, manual: false },
-  { ticker: "CNQ.TO", display: "CNQ CN",    issuer: "Canadian Natural Resources",   weight: 0.0358, manual: false },
-  { ticker: "XOM",    display: "XOM US",    issuer: "Exxon Mobil Corp",             weight: 0.0356, manual: false },
-  { ticker: "LNG",    display: "LNG US",    issuer: "Cheniere Energy Inc",          weight: 0.0315, manual: false },
-  { ticker: null,     display: "MNY CN",    issuer: "Purpose Cash Mgmt Fund",       weight: 0.0303, manual: true  },
-  { ticker: "KRP",    display: "KRP US",    issuer: "Kimbell Royalty Partners LP",  weight: 0.0271, manual: false },
-  { ticker: "CVE.TO", display: "CVE CN",    issuer: "Cenovus Energy Inc",           weight: 0.0269, manual: false },
-  { ticker: "NICU.V", display: "NICU CN",   issuer: "Magna Mining Inc",             weight: 0.0262, manual: false },
-  { ticker: "SICO.V",     display: "SICO CN",   issuer: "Silverco Mining Ltd",          weight: 0.0254, manual: false },
-  { ticker: "HSTR.V",     display: "HSTR CN",   issuer: "Heliostar Metals Ltd",         weight: 0.0252, manual: false },
-  { ticker: "EFXT",   display: "EFXT US",   issuer: "Enerflex Ltd",                 weight: 0.0218, manual: false },
-  { ticker: null,     display: ".LAF.R CN", issuer: "N/A",                          weight: 0.0191, manual: true  },
-  { ticker: null,     display: ".SM.SR CN", issuer: "N/A",                          weight: 0.0146, manual: true  },
-  { ticker: "CHAR.L",     display: "CHAR LN",   issuer: "Chariot Ltd",                  weight: 0.0121, manual: false },
-  { ticker: null,     display: "MNU/U CN",  issuer: "Purpose USD Cash Mgmt Fund",   weight: 0.0108, manual: true  },
-  { ticker: "LTH.V",  display: "LTH CN",    issuer: "Lithium Ionic Corp",           weight: 0.0089, manual: false },
+  { ticker: "TNZ.TO", display: "TNZ CN",    issuer: "Tenaz Energy Corp",            weight: 0.1886, manual: false, desc: "International oil and gas company focused on acquiring and developing upstream assets in stable jurisdictions. Operates producing assets in the Netherlands and holds a significant working interest in the West Delta Deep Marine concession in Egypt." },
+  { ticker: "VLO",    display: "VLO US",    issuer: "Valero Energy Corp",           weight: 0.1136, manual: false, desc: "One of the largest independent petroleum refining and marketing companies in the world. Operates 15 refineries with a combined throughput capacity of approximately 3.2 million barrels per day across the US, Canada, and the UK." },
+  { ticker: "MPC",    display: "MPC US",    issuer: "Marathon Petroleum Corp",      weight: 0.0984, manual: false, desc: "The largest US petroleum refiner by capacity, operating 13 refineries with ~2.9 million barrels per day of throughput. Also operates a significant midstream business through its majority stake in MPLX LP." },
+  { ticker: "SOC",    display: "SOC US",    issuer: "Sable Offshore Corp",          weight: 0.0529, manual: false, desc: "Oil and gas company focused on restarting production from the Santa Barbara Channel assets offshore California. The Santa Ynez Unit holds an estimated 150+ million barrels of proven reserves." },
+  { ticker: "SVM",    display: "SVM CN",    issuer: "Silvercorp Metals Inc",        weight: 0.0491, manual: false, desc: "Canadian silver mining company with low-cost operations in China. The Ying Mining District in Henan Province is one of China's largest primary silver mines and has been in continuous production for over 15 years." },
+  { ticker: null,     display: "{cash}",    issuer: "CAD Cash",                     weight: 0.0442, manual: true,  desc: "Canadian dollar cash position held within the fund. Provides liquidity and a buffer for redemptions and tactical deployment." },
+  { ticker: "LAR",    display: "LAR US",    issuer: "Lithium Argentina AG",         weight: 0.0393, manual: false, desc: "Lithium development company focused on Argentina's Lithium Triangle. The Caucharí-Olaroz lithium brine project in Jujuy Province is now in commercial production, targeting 40,000 tonnes per year of lithium carbonate." },
+  { ticker: "SU.TO",  display: "SU CN",     issuer: "Suncor Energy Inc",            weight: 0.0366, manual: false, desc: "Canada's largest integrated energy company and the world's largest oil sands producer. Operates mining and in-situ oil sands assets, four refineries, and the Petro-Canada retail fuel network of ~1,500 stations." },
+  { ticker: "CNQ.TO", display: "CNQ CN",    issuer: "Canadian Natural Resources",   weight: 0.0358, manual: false, desc: "One of Canada's largest independent crude oil and natural gas producers with a highly diversified portfolio spanning oil sands mining, thermal in-situ, heavy oil, light oil, and natural gas across Western Canada and the North Sea." },
+  { ticker: "XOM",    display: "XOM US",    issuer: "Exxon Mobil Corp",             weight: 0.0356, manual: false, desc: "The world's largest publicly traded international oil and gas company. Operates across the full energy value chain from upstream exploration and production to downstream refining, chemicals, and specialty products." },
+  { ticker: "LNG",    display: "LNG US",    issuer: "Cheniere Energy Inc",          weight: 0.0315, manual: false, desc: "The largest US exporter of liquefied natural gas and the second-largest LNG operator globally. Operates the Sabine Pass LNG terminal in Louisiana and the Corpus Christi LNG terminal in Texas." },
+  { ticker: null,     display: "MNY CN",    issuer: "Purpose Cash Mgmt Fund",       weight: 0.0303, manual: true,  desc: "Purpose Investments' short-duration Canadian dollar fixed income ETF used for cash management within the fund. Invests primarily in high-quality, liquid money market instruments." },
+  { ticker: "KRP",    display: "KRP US",    issuer: "Kimbell Royalty Partners LP",  weight: 0.0271, manual: false, desc: "Oil and gas royalty company owning mineral and royalty interests in over 16 million gross acres across all major US producing basins. Generates passive royalty income without bearing operational or capital expenditure risk." },
+  { ticker: "CVE.TO", display: "CVE CN",    issuer: "Cenovus Energy Inc",           weight: 0.0269, manual: false, desc: "Integrated Canadian oil and natural gas company formed from the 2021 merger of Cenovus and Husky Energy. Major oil sands producer operating the Foster Creek and Christina Lake SAGD projects, with downstream refining operations in Canada and the US." },
+  { ticker: "NICU.V", display: "NICU CN",   issuer: "Magna Mining Inc",             weight: 0.0262, manual: false, desc: "Canadian nickel-focused explorer and developer with assets in the Sudbury Basin of Ontario. The flagship Shakespeare nickel-copper-cobalt deposit is a past-producing open-pit mine targeting restart." },
+  { ticker: "SICO.V", display: "SICO CN",   issuer: "Silverco Mining Ltd",          weight: 0.0254, manual: false, desc: "Silver-focused mining and exploration company with projects in British Columbia. Advancing the Silvertip high-grade silver-zinc-lead mine, one of the highest-grade silver deposits in North America." },
+  { ticker: "HSTR.V", display: "HSTR CN",   issuer: "Heliostar Metals Ltd",         weight: 0.0252, manual: false, desc: "Gold exploration and development company focused on high-grade projects in Mexico and Alaska. The San Agustin open-pit heap-leach gold project in Sonora, Mexico is the primary development asset." },
+  { ticker: "EFXT",   display: "EFXT US",   issuer: "Enerflex Ltd",                 weight: 0.0218, manual: false, desc: "Global provider of natural gas compression, processing, refrigeration, and power generation solutions to the oil and gas industry. Operates across North America, Latin America, the Middle East, and Australia." },
+  { ticker: null,     display: ".LAF.R CN", issuer: "N/A",                          weight: 0.0191, manual: true,  desc: "Unlisted or restricted security. No public market price data available; position is carried at internally determined fair value." },
+  { ticker: null,     display: ".SM.SR CN", issuer: "N/A",                          weight: 0.0146, manual: true,  desc: "Unlisted or restricted security. No public market price data available; position is carried at internally determined fair value." },
+  { ticker: "CHAR.L", display: "CHAR LN",   issuer: "Chariot Ltd",                  weight: 0.0121, manual: false, desc: "Africa-focused transition energy company with natural gas and renewables assets. Key projects include the Lixus and Rissana offshore gas blocks in Morocco and the Anchois gas development, as well as power projects in Mauritania and South Africa." },
+  { ticker: null,     display: "MNU/U CN",  issuer: "Purpose USD Cash Mgmt Fund",   weight: 0.0108, manual: true,  desc: "Purpose Investments' short-duration US dollar fixed income ETF used for USD cash management within the fund. Invests primarily in high-quality, liquid US dollar money market instruments." },
+  { ticker: "LTH.V",  display: "LTH CN",    issuer: "Lithium Ionic Corp",           weight: 0.0089, manual: false, desc: "Brazilian lithium developer advancing the Bandeira and Outro Lado hard-rock lithium projects in Minas Gerais, Brazil. Located in the prolific Eastern Brazilian Pegmatite Province, a world-class lithium district." },
 ];
 
 const manualValues = {};
@@ -666,6 +765,11 @@ row.innerHTML = `
   <span style="text-align:right">${contribHtml}</span>
   <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
 `;
+row.style.cursor = 'pointer';
+row.addEventListener('click', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  openModal(h);
+});
 tbody.appendChild(row);
 
 });
@@ -743,6 +847,7 @@ document.getElementById('lastUpdated').textContent =
 btn.disabled = false;
 btn.textContent = '↻ Refresh Prices';
 render();
+fetchFundNAV();
 }
 
 // ── Manual ───────────────────────────────────────────────────────────────────
@@ -768,6 +873,54 @@ manualValues[holdings[i].display] = (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
 render();
 }
 }
+
+// ── Fund NAV ─────────────────────────────────────────────────────────────────
+async function fetchFundNAV() {
+const gmUrl = 'https://www.theglobeandmail.com/investing/markets/funds/PFC5101.CF/';
+const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(gmUrl)}`;
+try {
+const r = await fetch(proxyUrl);
+if (!r.ok) throw new Error('HTTP ' + r.status);
+const html = await r.text();
+const match = html.match(/quote='(\{[^']+\})'/);
+if (!match) throw new Error('quote attribute not found');
+const quote = JSON.parse(match[1]);
+const nav = parseFloat(quote.lastPrice);
+const pct = parseFloat(String(quote.percentChange).replace('%', ''));
+if (isNaN(nav) || isNaN(pct)) throw new Error('invalid data');
+const navEl = document.getElementById('fundNAV');
+const moveEl = document.getElementById('reportedMove');
+const dateEl = document.getElementById('navDate');
+if (navEl) navEl.textContent = '$' + nav.toFixed(4);
+if (dateEl) dateEl.textContent = 'as of ' + (quote.tradeTime || '');
+if (moveEl) {
+  const sign = pct >= 0 ? '+' : '';
+  moveEl.textContent = sign + pct.toFixed(2) + '%';
+  moveEl.className = 'summary-value ' + (pct > 0.001 ? 'positive' : pct < -0.001 ? 'negative' : 'neutral');
+}
+if (typeof dbg === 'function') dbg('Fund NAV: $' + nav.toFixed(4) + ' (' + quote.percentChange + ') as of ' + quote.tradeTime);
+} catch(e) {
+if (typeof dbg === 'function') dbg('FAIL fund NAV: ' + e.message);
+}
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+function openModal(h) {
+document.getElementById('modalTag').textContent = h.manual ? 'Manual / Unlisted' : 'Holding Detail';
+document.getElementById('modalTitle').textContent = h.issuer;
+document.getElementById('modalTicker').textContent = h.ticker ? h.ticker + '  ·  ' + h.display : h.display;
+document.getElementById('modalDesc').textContent = h.desc || 'No description available.';
+document.getElementById('modalWeight').textContent = 'Portfolio weight: ' + (h.weight * 100).toFixed(2) + '%';
+document.getElementById('modalOverlay').classList.remove('hidden');
+}
+
+function closeModal() {
+document.getElementById('modalOverlay').classList.add('hidden');
+}
+
+document.addEventListener('keydown', function(e) {
+if (e.key === 'Escape') closeModal();
+});
 
 document.addEventListener('DOMContentLoaded', function() {
 render();
