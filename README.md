@@ -2,7 +2,7 @@
 
 A single-page dashboard for tracking the daily price attribution of the **Purpose Global Resources Fund Series F** (PFC5101.CF). It fetches live prices for each underlying holding, calculates each position's contribution to the fund's daily move, and presents the results in a clean, mobile-friendly layout.
 
-Live at: **https://coreycousins.github.io/Purpose-Global-Resource-Breakdown/**
+Live at: **https://coreycousins.github.io/Purpose-Global-Resource-Breakdown/PurposeInvestmentBreakdown.html**
 
 ---
 
