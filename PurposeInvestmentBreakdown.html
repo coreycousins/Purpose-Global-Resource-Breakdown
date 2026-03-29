@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v2.4</title>
+<title>Purpose Global Resources — Daily Attribution v2.5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -497,29 +497,34 @@ letter-spacing: 0.02em;
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-.summary-card {
-grid-template-columns: 1fr 1px 1fr;
-grid-template-rows: auto auto;
-}
-.summary-item:nth-child(5),
-.summary-item:nth-child(7),
-.summary-item:nth-child(9),
-.summary-item:nth-child(11),
-.summary-divider:nth-child(4),
-.summary-divider:nth-child(6),
-.summary-divider:nth-child(8),
-.summary-divider:nth-child(10) { display: none; }
+/* Container */
+.container { padding: 24px 14px 64px; }
 
-.table-header-row,
-.holding-row {
-  grid-template-columns: 80px 1fr 62px 78px 88px 20px;
-  font-size: 11px;
-}
-.fund-title { font-size: 24px; }
-.summary-value { font-size: 30px; }
-.header { flex-direction: column; align-items: flex-start; }
+/* Header */
+.fund-title { font-size: 20px; }
+.header { flex-direction: column; align-items: flex-start; gap: 12px; }
 .header-right { align-items: flex-start; }
 
+/* Summary strip: 2×2 grid, hide Top Contributor and Top Drag */
+.summary-card { grid-template-columns: 1fr 1fr; }
+.summary-divider { display: none; }
+.summary-item { padding: 14px 12px; min-width: 0 !important; }
+.summary-item:nth-child(5),
+.summary-item:nth-child(7) { display: none; }
+.summary-value { font-size: 20px; }
+.coverage-meta { font-size: 9px; }
+
+/* Holdings table: hide Weight and arrow columns */
+.table-header-row,
+.holding-row { grid-template-columns: 70px 1fr 58px 70px; font-size: 11px; }
+.table-header-row span:nth-child(3),
+.table-header-row span:nth-child(6),
+.holding-row > span:nth-child(3),
+.holding-row > span:nth-child(6) { display: none; }
+.manual-input { width: 54px; font-size: 10px; padding: 3px 5px; }
+
+/* Debug panel */
+#debugPanel { margin: 8px; }
 }
 </style>
 
@@ -582,7 +587,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.4</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.5</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
