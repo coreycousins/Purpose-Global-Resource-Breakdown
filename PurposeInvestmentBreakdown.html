@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v2.3</title>
+<title>Purpose Global Resources — Daily Attribution v2.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -528,7 +528,7 @@ grid-template-rows: auto auto;
 <!-- DEBUG PANEL -->
 <div id="debugPanel" style="background:#1a0a0a;border:2px solid #f25c5c;color:#f25c5c;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
   <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
-    <span>DEBUG <span id="debugSummary">loading...</span></span>
+    <span>DEBUG — expand to see debug info</span>
     <span id="debugToggle" style="font-size:10px;opacity:0.6;">▼ expand</span>
   </div>
   <div id="debugBody" style="display:none;padding:0 16px 16px;line-height:1.8;white-space:pre-wrap;border-top:1px solid rgba(242,92,92,0.3);max-height:300px;overflow-y:auto;"></div>
@@ -539,9 +539,7 @@ grid-template-rows: auto auto;
   var expanded = false;
   function dbg(msg) {
     log.push(msg);
-    var summary = document.getElementById('debugSummary');
     var body = document.getElementById('debugBody');
-    if (summary) summary.textContent = log[log.length - 1];
     if (body) body.textContent = log.join('\n');
     console.log('[DBG]', msg);
   }
@@ -584,7 +582,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.3</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.4</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
@@ -663,6 +661,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="modal-ticker" id="modalTicker"></div>
     <div class="modal-desc" id="modalDesc"></div>
     <div class="modal-weight" id="modalWeight"></div>
+    <a id="modalNewsLink" href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:16px;font-size:10.5px;color:var(--accent);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid rgba(77,175,207,0.3);">↗ Recent news</a>
   </div>
 </div>
 
@@ -911,6 +910,8 @@ document.getElementById('modalTitle').textContent = h.issuer;
 document.getElementById('modalTicker').textContent = h.ticker ? h.ticker + '  ·  ' + h.display : h.display;
 document.getElementById('modalDesc').textContent = h.desc || 'No description available.';
 document.getElementById('modalWeight').textContent = 'Portfolio weight: ' + (h.weight * 100).toFixed(2) + '%';
+const newsQuery = encodeURIComponent(h.issuer + (h.ticker ? ' ' + h.ticker : '') + ' recent news');
+document.getElementById('modalNewsLink').href = 'https://news.google.com/search?q=' + newsQuery;
 document.getElementById('modalOverlay').classList.remove('hidden');
 }
 
