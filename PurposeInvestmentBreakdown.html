@@ -807,6 +807,19 @@ const SECTOR_DESCS = {
   "Unlisted":        "Securities with no active public market. Positions are carried at internally determined fair value and are not subject to daily mark-to-market pricing.",
 };
 
+const SECTOR_NEWS = {
+  "Oil & Gas E&P":   "oil gas exploration production upstream E&P",
+  "Refining":        "oil refining crack spread petroleum refinery",
+  "Integrated Oil":  "integrated oil major supermajor upstream downstream",
+  "Natural Gas":     "natural gas LNG liquefied energy",
+  "O&G Royalties":   "oil gas royalties mineral rights royalty income",
+  "Energy Services": "oilfield services energy services drilling",
+  "Silver Mining":   "silver mining precious metals production",
+  "Gold Mining":     "gold mining bullion precious metals",
+  "Nickel Mining":   "nickel mining battery materials EV supply chain",
+  "Lithium":         "lithium mining battery materials critical minerals",
+};
+
 const manualValues = {};
 const priceData    = {};
 
@@ -1196,7 +1209,14 @@ document.getElementById('modalTicker').textContent = '';
 document.getElementById('modalDesc').textContent = SECTOR_DESCS[s.label] || 'No description available.';
 document.getElementById('modalSector').innerHTML = '<span class="sector-tag ' + s.cls + '">' + s.label + '</span>';
 document.getElementById('modalWeight').textContent = 'Total fund weight: ' + (s.totalWeight * 100).toFixed(2) + '%';
-document.getElementById('modalNewsLink').style.display = 'none';
+const newsLink = document.getElementById('modalNewsLink');
+const newsQuery = SECTOR_NEWS[s.label];
+if (newsQuery) {
+  newsLink.href = 'https://news.google.com/search?q=' + encodeURIComponent(newsQuery);
+  newsLink.style.display = '';
+} else {
+  newsLink.style.display = 'none';
+}
 document.getElementById('modalOverlay').classList.remove('hidden');
 }
 
