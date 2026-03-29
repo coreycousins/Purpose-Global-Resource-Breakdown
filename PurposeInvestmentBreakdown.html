@@ -496,6 +496,14 @@ letter-spacing: 0.02em;
 }
 
 /* ── Responsive ── */
+@media (max-width: 900px) and (orientation: landscape) {
+/* Summary strip: 3-col grid, 2 rows */
+.summary-card { grid-template-columns: 1fr 1fr 1fr; overflow: visible; }
+.summary-divider { display: none; }
+.summary-item { padding: 12px 14px; min-width: 0 !important; }
+.summary-value { font-size: 24px; }
+}
+
 @media (max-width: 640px) {
 /* Container */
 .container { padding: 24px 14px 64px; }
