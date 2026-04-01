@@ -631,6 +631,72 @@ color: var(--text);
 .position-value.positive { color: var(--green); }
 .position-value.negative { color: var(--red); }
 
+/* ── Market Indicators (sector modal) ── */
+.modal-indicators {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 16px;
+}
+.modal-indicators-title {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.indicator-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.indicator-row:last-child { border-bottom: none; }
+.indicator-name {
+  font-size: 10.5px;
+  color: var(--label);
+  letter-spacing: 0.03em;
+}
+.indicator-price {
+  font-size: 11.5px;
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+  letter-spacing: 0.01em;
+}
+.indicator-chg {
+  font-size: 11px;
+  text-align: right;
+  min-width: 52px;
+  letter-spacing: 0.01em;
+}
+.indicator-chg.pos  { color: var(--green); }
+.indicator-chg.neg  { color: var(--red); }
+.indicator-chg.zero { color: var(--muted); }
+.indicator-derived {
+  background: rgba(77,175,207,0.04);
+  border: 1px solid rgba(77,175,207,0.13) !important;
+  padding: 5px 8px;
+  margin-top: 6px;
+}
+.indicator-derived .indicator-name { color: var(--accent); }
+.indicator-derived .indicator-price { color: var(--accent); }
+.indicator-note {
+  font-size: 8.5px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  display: block;
+  margin-top: 1px;
+}
+.indicator-loading {
+  font-size: 10.5px;
+  color: var(--muted);
+  padding: 8px 0;
+  letter-spacing: 0.05em;
+  animation: blink 1.4s ease infinite;
+}
+
 /* ── Footer ── */
 .footer-note {
 margin-top: 28px;
@@ -882,7 +948,11 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="modal-desc" id="modalDesc"></div>
     <div class="modal-sector" id="modalSector"></div>
     <div class="modal-weight" id="modalWeight"></div>
-    <a id="modalNewsLink" href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:16px;font-size:10.5px;color:var(--accent);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid rgba(77,175,207,0.3);">↗ Recent news</a>
+    <div class="modal-indicators" id="modalIndicators" style="display:none">
+    <div class="modal-indicators-title">Market Indicators</div>
+    <div id="modalIndicatorsBody"></div>
+  </div>
+  <a id="modalNewsLink" href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:16px;font-size:10.5px;color:var(--accent);letter-spacing:0.06em;text-decoration:none;border-bottom:1px solid rgba(77,175,207,0.3);">↗ Recent news</a>
   </div>
 </div>
 
@@ -942,6 +1012,153 @@ const SECTOR_NEWS = {
   "Nickel Mining":   "nickel mining battery materials EV supply chain",
   "Lithium":         "lithium mining battery materials critical minerals",
 };
+
+// ── Sector market indicators ──────────────────────────────────────────────────
+const SECTOR_INDICATORS = {
+  "Refining": {
+    tickers: [
+      { ticker: "CL=F", label: "WTI Crude Oil",          fmt: p => `$${p.toFixed(2)}/bbl` },
+      { ticker: "RB=F", label: "RBOB Gasoline",           fmt: p => `$${(p*42).toFixed(2)}/bbl` },
+      { ticker: "HO=F", label: "Heating Oil (diesel)",    fmt: p => `$${(p*42).toFixed(2)}/bbl` },
+    ],
+    derived: [
+      {
+        label: "3-2-1 Crack Spread",
+        note:  "2×gasoline + 1×diesel − 3×crude / 3",
+        calc(prices) {
+          const cl = prices["CL=F"], rb = prices["RB=F"], ho = prices["HO=F"];
+          if (!cl || !rb || !ho || cl.error || rb.error || ho.error) return null;
+          const spread     = (2*rb.price*42 + ho.price*42 - 3*cl.price) / 3;
+          const spreadPrev = (2*rb.prev*42  + ho.prev*42  - 3*cl.prev)  / 3;
+          const chg = spreadPrev ? ((spread - spreadPrev) / Math.abs(spreadPrev)) * 100 : 0;
+          return { display: `$${spread.toFixed(2)}/bbl`, chg };
+        }
+      }
+    ]
+  },
+  "Oil & Gas E&P": {
+    tickers: [
+      { ticker: "CL=F", label: "WTI Crude Oil",   fmt: p => `$${p.toFixed(2)}/bbl` },
+      { ticker: "BZ=F", label: "Brent Crude Oil",  fmt: p => `$${p.toFixed(2)}/bbl` },
+    ]
+  },
+  "Integrated Oil": {
+    tickers: [
+      { ticker: "CL=F", label: "WTI Crude Oil",   fmt: p => `$${p.toFixed(2)}/bbl` },
+      { ticker: "BZ=F", label: "Brent Crude Oil",  fmt: p => `$${p.toFixed(2)}/bbl` },
+    ]
+  },
+  "O&G Royalties": {
+    tickers: [
+      { ticker: "CL=F", label: "WTI Crude Oil",      fmt: p => `$${p.toFixed(2)}/bbl` },
+      { ticker: "NG=F", label: "Henry Hub Nat. Gas",  fmt: p => `$${p.toFixed(3)}/MMBtu` },
+    ]
+  },
+  "Energy Services": {
+    tickers: [
+      { ticker: "CL=F", label: "WTI Crude Oil",  fmt: p => `$${p.toFixed(2)}/bbl` },
+    ]
+  },
+  "Natural Gas": {
+    tickers: [
+      { ticker: "NG=F",  label: "Henry Hub Nat. Gas",  fmt: p => `$${p.toFixed(3)}/MMBtu` },
+    ]
+  },
+  "Silver Mining": {
+    tickers: [
+      { ticker: "SI=F", label: "Silver", fmt: p => `$${p.toFixed(2)}/oz` },
+    ]
+  },
+  "Gold Mining": {
+    tickers: [
+      { ticker: "GC=F", label: "Gold", fmt: p => `$${p.toFixed(2)}/oz` },
+    ]
+  },
+  "Nickel Mining": {
+    tickers: [
+      { ticker: "NI=F", label: "LME Nickel", fmt: p => `$${p.toFixed(2)}/t` },
+    ]
+  },
+};
+
+const commodityCache = {};
+
+async function fetchCommodity(ticker) {
+  if (commodityCache[ticker]) return commodityCache[ticker];
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
+  try {
+    const r = await fetch(proxyUrl);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('no meta');
+    const prev  = meta.chartPreviousClose || meta.previousClose;
+    const price = meta.regularMarketPrice;
+    if (!prev || !price) throw new Error('no price');
+    const result = { price, prev, chg: ((price - prev) / prev) * 100, error: false };
+    commodityCache[ticker] = result;
+    return result;
+  } catch(e) {
+    if (typeof dbg === 'function') dbg('FAIL commodity ' + ticker + ': ' + e.message);
+    const result = { price: null, prev: null, chg: null, error: true };
+    commodityCache[ticker] = result;
+    return result;
+  }
+}
+
+async function renderIndicators(sectorLabel) {
+  const cfg  = SECTOR_INDICATORS[sectorLabel];
+  const wrap = document.getElementById('modalIndicators');
+  const body = document.getElementById('modalIndicatorsBody');
+  if (!cfg) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = '';
+  body.innerHTML = '<div class="indicator-loading">fetching indicators···</div>';
+
+  const tickers = cfg.tickers || [];
+  const results = await Promise.all(tickers.map(t => fetchCommodity(t.ticker)));
+
+  const prices = {};
+  tickers.forEach((t, i) => { prices[t.ticker] = results[i]; });
+
+  let html = '';
+
+  tickers.forEach((t, i) => {
+    const d = results[i];
+    if (d.error) {
+      html += `<div class="indicator-row">
+        <span class="indicator-name">${t.label}</span>
+        <span class="indicator-price" style="color:var(--muted)">N/A</span>
+        <span class="indicator-chg zero">—</span>
+      </div>`;
+    } else {
+      const sign = d.chg >= 0 ? '+' : '';
+      const cls  = d.chg > 0.01 ? 'pos' : d.chg < -0.01 ? 'neg' : 'zero';
+      html += `<div class="indicator-row">
+        <span class="indicator-name">${t.label}</span>
+        <span class="indicator-price">${t.fmt(d.price)}</span>
+        <span class="indicator-chg ${cls}">${sign}${d.chg.toFixed(2)}%</span>
+      </div>`;
+    }
+  });
+
+  if (cfg.derived) {
+    cfg.derived.forEach(der => {
+      const res = der.calc(prices);
+      if (!res) return;
+      const sign = res.chg >= 0 ? '+' : '';
+      const cls  = res.chg > 0.01 ? 'pos' : res.chg < -0.01 ? 'neg' : 'zero';
+      html += `<div class="indicator-row indicator-derived">
+        <span class="indicator-name">${der.label}${der.note ? `<span class="indicator-note">${der.note}</span>` : ''}</span>
+        <span class="indicator-price">${res.display}</span>
+        <span class="indicator-chg ${cls}">${sign}${res.chg.toFixed(2)}%</span>
+      </div>`;
+    });
+  }
+
+  body.innerHTML = html;
+}
 
 const manualValues = {};
 const priceData    = {};
@@ -1290,6 +1507,7 @@ return { changePercent: 0, loaded: true, error: true, quoteTime: null };
 }
 
 async function fetchAll() {
+Object.keys(commodityCache).forEach(k => delete commodityCache[k]);
 const btn = document.getElementById('refreshBtn');
 btn.disabled = true;
 btn.textContent = '↻ Fetching…';
@@ -1384,6 +1602,7 @@ if (typeof dbg === 'function') dbg('FAIL fund NAV: ' + e.message);
 
 // ── Modal ────────────────────────────────────────────────────────────────────
 function openModal(h) {
+document.getElementById('modalIndicators').style.display = 'none';
 document.getElementById('modalTag').textContent = h.manual ? 'Manual / Unlisted' : 'Holding Detail';
 document.getElementById('modalTitle').textContent = h.issuer;
 document.getElementById('modalTicker').textContent = h.ticker ? h.ticker + '  ·  ' + h.display : h.display;
@@ -1405,6 +1624,7 @@ document.getElementById('modalOverlay').classList.add('hidden');
 }
 
 function openSectorModal(s) {
+renderIndicators(s.label);
 document.getElementById('modalTag').textContent = 'Sector';
 document.getElementById('modalTitle').textContent = s.label;
 document.getElementById('modalTicker').textContent = '';
