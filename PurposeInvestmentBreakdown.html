@@ -1100,8 +1100,8 @@ const computed = holdings.map((h, i) => {
     contribHtml = `<span class="contribution zero">—</span>`;
   }
 
-  const fetchedAt = h.manual ? null : (priceData[h.ticker]?.fetchedAt || null);
-  return { h, i, dayPct, contrib, dayHtml, contribHtml, fetchedAt };
+  const quoteTime = h.manual ? null : (priceData[h.ticker]?.quoteTime || null);
+  return { h, i, dayPct, contrib, dayHtml, contribHtml, quoteTime };
 });
 
 // 2. Sort
@@ -1119,10 +1119,10 @@ sorted.sort((a, b) => {
   }
   if (sortCol === 'contrib') return sortDir * (a.contrib - b.contrib);
   if (sortCol === 'age') {
-    if (a.fetchedAt === null && b.fetchedAt === null) return 0;
-    if (a.fetchedAt === null) return 1;
-    if (b.fetchedAt === null) return -1;
-    return sortDir * (a.fetchedAt - b.fetchedAt);
+    if (a.quoteTime === null && b.quoteTime === null) return 0;
+    if (a.quoteTime === null) return 1;
+    if (b.quoteTime === null) return -1;
+    return sortDir * (a.quoteTime - b.quoteTime);
   }
   return 0;
 });
@@ -1134,7 +1134,7 @@ const maxAbsContrib = Math.max(...computed.map(r => Math.abs(r.contrib)));
 const barScale = Math.max(maxAbsContrib, 0.10);
 
 // 3. Render sorted rows
-sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml, fetchedAt }) => {
+sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml, quoteTime }) => {
   const row = document.createElement('div');
   row.className = 'holding-row';
 
@@ -1155,7 +1155,7 @@ sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml, fetchedAt }) => {
     <span><span class="sector-tag ${h.sector.cls}">${h.sector.label}</span></span>
     <span class="weight">${(h.weight * 100).toFixed(2)}%</span>
     <span style="text-align:right">${dayHtml}</span>
-    <span class="age-cell">${formatAge(fetchedAt)}</span>
+    <span class="age-cell">${formatAge(quoteTime)}</span>
     <span style="text-align:right">${contribHtml}</span>
     <span style="text-align:right">${cadHtml}</span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
@@ -1281,10 +1281,11 @@ if (!meta) {
 const prev  = meta.chartPreviousClose || meta.previousClose;
 const price = meta.regularMarketPrice;
 if (!prev || !price) throw new Error(`no price (prev=${prev}, price=${price})`);
-return { changePercent: ((price - prev) / prev) * 100, loaded: true, error: false, fetchedAt: Date.now() };
+const quoteTime = meta.regularMarketTime ? meta.regularMarketTime * 1000 : null;
+return { changePercent: ((price - prev) / prev) * 100, loaded: true, error: false, quoteTime };
 } catch(e) {
 if (typeof dbg === 'function') dbg('FAIL ' + ticker + ': ' + e.message);
-return { changePercent: 0, loaded: true, error: true, fetchedAt: Date.now() };
+return { changePercent: 0, loaded: true, error: true, quoteTime: null };
 }
 }
 
