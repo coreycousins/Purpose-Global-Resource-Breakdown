@@ -290,7 +290,7 @@ background: var(--border);
 
 .table-header-row {
 display: grid;
-grid-template-columns: 100px 1fr 110px 76px 88px 100px 90px 24px;
+grid-template-columns: 100px 1fr 110px 76px 88px 64px 100px 90px 24px;
 padding: 7px 14px;
 font-size: 9.5px;
 letter-spacing: 0.12em;
@@ -312,7 +312,7 @@ user-select: none;
 
 .holding-row {
 display: grid;
-grid-template-columns: 100px 1fr 110px 76px 88px 100px 90px 24px;
+grid-template-columns: 100px 1fr 110px 76px 88px 64px 100px 90px 24px;
 padding: 10px 14px;
 border-bottom: 1px solid var(--border);
 align-items: center;
@@ -414,6 +414,13 @@ font-size: 11.5px;
 text-align: right;
 font-size: 9px;
 color: var(--muted);
+}
+
+.age-cell {
+text-align: right;
+font-size: 10.5px;
+color: var(--muted);
+letter-spacing: 0.03em;
 }
 
 /* Manual input */
@@ -660,17 +667,19 @@ letter-spacing: 0.02em;
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
-/* Holdings table: hide Sector, Weight, CAD move and arrow columns */
+/* Holdings table: hide Sector, Weight, Age, CAD move and arrow columns */
 .table-header-row,
 .holding-row { grid-template-columns: 70px 1fr 58px 70px; font-size: 11px; }
 .table-header-row span:nth-child(3),
 .table-header-row span:nth-child(4),
-.table-header-row span:nth-child(7),
+.table-header-row span:nth-child(6),
 .table-header-row span:nth-child(8),
+.table-header-row span:nth-child(9),
 .holding-row > span:nth-child(3),
 .holding-row > span:nth-child(4),
-.holding-row > span:nth-child(7),
-.holding-row > span:nth-child(8) { display: none; }
+.holding-row > span:nth-child(6),
+.holding-row > span:nth-child(8),
+.holding-row > span:nth-child(9) { display: none; }
 .manual-input { width: 54px; font-size: 10px; padding: 3px 5px; }
 
 /* Sector table: hide Weight, CAD move and arrow columns */
@@ -847,6 +856,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <span data-col="sector" onclick="setSort('sector')">Sector<span class="sort-arrow"></span></span>
     <span class="col-right sort-active" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"> ▼</span></span>
     <span class="col-right" data-col="daypct" onclick="setSort('daypct')">Day %<span class="sort-arrow"></span></span>
+    <span class="col-right" data-col="age" onclick="setSort('age')">Age<span class="sort-arrow"></span></span>
     <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
     <span class="col-right">CAD Move</span>
     <span></span>
@@ -944,6 +954,16 @@ function onSharesInput(val) {
   sharesHeld = parseFloat(val) || 0;
   localStorage.setItem('sharesHeld', sharesHeld);
   render();
+}
+
+function formatAge(fetchedAt) {
+  if (!fetchedAt) return '—';
+  const mins = Math.floor((Date.now() - fetchedAt) / 60000);
+  if (mins < 1) return '<1m';
+  if (mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h';
+  return Math.floor(hrs / 24) + 'd';
 }
 
 function formatCAD(val) {
@@ -1080,7 +1100,8 @@ const computed = holdings.map((h, i) => {
     contribHtml = `<span class="contribution zero">—</span>`;
   }
 
-  return { h, i, dayPct, contrib, dayHtml, contribHtml };
+  const fetchedAt = h.manual ? null : (priceData[h.ticker]?.fetchedAt || null);
+  return { h, i, dayPct, contrib, dayHtml, contribHtml, fetchedAt };
 });
 
 // 2. Sort
@@ -1097,6 +1118,12 @@ sorted.sort((a, b) => {
     return sortDir * (a.dayPct - b.dayPct);
   }
   if (sortCol === 'contrib') return sortDir * (a.contrib - b.contrib);
+  if (sortCol === 'age') {
+    if (a.fetchedAt === null && b.fetchedAt === null) return 0;
+    if (a.fetchedAt === null) return 1;
+    if (b.fetchedAt === null) return -1;
+    return sortDir * (a.fetchedAt - b.fetchedAt);
+  }
   return 0;
 });
 
@@ -1107,7 +1134,7 @@ const maxAbsContrib = Math.max(...computed.map(r => Math.abs(r.contrib)));
 const barScale = Math.max(maxAbsContrib, 0.10);
 
 // 3. Render sorted rows
-sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml }) => {
+sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml, fetchedAt }) => {
   const row = document.createElement('div');
   row.className = 'holding-row';
 
@@ -1128,6 +1155,7 @@ sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml }) => {
     <span><span class="sector-tag ${h.sector.cls}">${h.sector.label}</span></span>
     <span class="weight">${(h.weight * 100).toFixed(2)}%</span>
     <span style="text-align:right">${dayHtml}</span>
+    <span class="age-cell">${formatAge(fetchedAt)}</span>
     <span style="text-align:right">${contribHtml}</span>
     <span style="text-align:right">${cadHtml}</span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
@@ -1253,10 +1281,10 @@ if (!meta) {
 const prev  = meta.chartPreviousClose || meta.previousClose;
 const price = meta.regularMarketPrice;
 if (!prev || !price) throw new Error(`no price (prev=${prev}, price=${price})`);
-return { changePercent: ((price - prev) / prev) * 100, loaded: true, error: false };
+return { changePercent: ((price - prev) / prev) * 100, loaded: true, error: false, fetchedAt: Date.now() };
 } catch(e) {
 if (typeof dbg === 'function') dbg('FAIL ' + ticker + ': ' + e.message);
-return { changePercent: 0, loaded: true, error: true };
+return { changePercent: 0, loaded: true, error: true, fetchedAt: Date.now() };
 }
 }
 
@@ -1401,6 +1429,7 @@ document.addEventListener('DOMContentLoaded', function() {
 if (sharesHeld) document.getElementById('sharesInput').value = sharesHeld;
 render();
 fetchAll();
+setInterval(render, 60000);
 });
 </script>
 
