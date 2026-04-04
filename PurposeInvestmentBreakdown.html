@@ -584,37 +584,31 @@ opacity: 0;
 .sector-row:hover { background: rgba(255,255,255,0.022); }
 
 
-/* ── Position bar ── */
-.position-bar {
+/* ── Top rows ── */
+.top-row {
 display: flex;
-align-items: center;
-gap: 0;
+align-items: stretch;
 background: var(--card-bg);
 border: 1px solid var(--border);
-margin-bottom: 20px;
-flex-wrap: wrap;
-}
-.position-field {
-display: flex;
-align-items: center;
-gap: 10px;
-padding: 14px 18px;
-}
-.position-divider {
-width: 1px;
-background: var(--border);
-align-self: stretch;
-}
-.position-item {
-padding: 14px 18px;
-}
-.position-label {
-font-size: 9.5px;
-letter-spacing: 0.14em;
-color: var(--muted);
-text-transform: uppercase;
+overflow: hidden;
 margin-bottom: 6px;
 }
+.top-row-item {
+padding: 18px 20px;
+flex: 0 0 auto;
+}
+.top-row-divider {
+width: 1px;
+background: var(--border);
+flex-shrink: 0;
+}
+.coverage-row {
+background: var(--card-bg);
+border: 1px solid var(--border);
+padding: 16px 20px;
+margin-bottom: 36px;
+}
+/* .position-label removed — use .summary-label */
 .position-input {
 background: rgba(77,175,207,0.06);
 border: 1px solid rgba(77,175,207,0.22);
@@ -721,10 +715,9 @@ letter-spacing: 0.02em;
 
 /* ── Responsive ── */
 @media (max-width: 900px) and (orientation: landscape) {
-/* Summary strip: wrap to multi-row */
-.summary-card { flex-wrap: wrap; overflow: visible; }
-.summary-divider { display: none; }
-.summary-item { padding: 12px 14px; flex: 1 1 30%; min-width: 0 !important; border-bottom: 1px solid var(--border); }
+.top-row { flex-wrap: wrap; overflow: visible; }
+.top-row-divider { display: none; }
+.top-row-item { flex: 1 1 30%; min-width: 0; border-bottom: 1px solid var(--border); }
 .summary-value { font-size: 24px; }
 }
 
@@ -737,10 +730,10 @@ letter-spacing: 0.02em;
 .header { flex-direction: column; align-items: flex-start; gap: 12px; }
 .header-right { align-items: flex-start; }
 
-/* Summary strip: wrap 2-col */
-.summary-card { flex-wrap: wrap; }
-.summary-divider { display: none; }
-.summary-item { padding: 14px 12px; flex: 1 1 45%; min-width: 0 !important; border-bottom: 1px solid var(--border); }
+/* Top rows: wrap 2-col */
+.top-row { flex-wrap: wrap; }
+.top-row-divider { display: none; }
+.top-row-item { flex: 1 1 45%; min-width: 0; border-bottom: 1px solid var(--border); }
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
@@ -833,54 +826,53 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     </div>
   </div>
 
-  <!-- Position -->
+  <!-- Row 1: Facts -->
 
-  <div class="position-bar">
-    <div class="position-field">
-      <div>
-        <div class="position-label">Shares Held</div>
-        <input class="position-input" id="sharesInput" type="number" min="0" placeholder="0" oninput="onSharesInput(this.value)">
-      </div>
+  <div class="top-row">
+    <div class="top-row-item">
+      <div class="summary-label">Shares Held</div>
+      <input class="position-input" id="sharesInput" type="number" min="0" placeholder="0" oninput="onSharesInput(this.value)">
     </div>
-    <div class="position-divider"></div>
-    <div class="position-item">
-      <div class="position-label">Total Value</div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Total Value</div>
       <div class="position-value" id="positionValue">—</div>
     </div>
-    <div class="position-divider"></div>
-    <div class="position-item">
-      <div class="position-label">Est. Daily Move</div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Fund NAV</div>
+      <div class="summary-value neutral" id="fundNAV">—</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px;letter-spacing:0.04em" id="navDate"></div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Reported Move</div>
+      <div class="summary-value neutral" id="reportedMove">—</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Estimates -->
+
+  <div class="top-row">
+    <div class="top-row-item">
+      <div class="summary-label">Est. Fund Move</div>
+      <div class="summary-value neutral" id="totalMove">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Est. Position P&amp;L</div>
       <div class="position-value" id="positionMove">—</div>
     </div>
   </div>
 
-  <!-- Summary -->
+  <!-- Row 3: Coverage -->
 
-  <div class="summary-card">
-    <div class="summary-item">
-      <div class="summary-label">Est. Fund Move</div>
-      <div class="summary-value neutral" id="totalMove">—</div>
+  <div class="coverage-row">
+    <div class="coverage-meta">
+      <span id="coveredPct">0%</span>
+      <span><span class="status-dot loading" id="statusDot"></span><span id="statusText">Loading…</span></span>
     </div>
-    <div class="summary-divider"></div>
-    <div class="summary-item" style="flex:1;min-width:180px">
-      <div class="summary-label">Coverage</div>
-      <div class="coverage-meta">
-        <span id="coveredPct">0%</span>
-        <span><span class="status-dot loading" id="statusDot"></span><span id="statusText">Loading…</span></span>
-      </div>
-      <div class="coverage-bar"><div class="coverage-fill" id="coverageFill" style="width:0%"></div></div>
-    </div>
-    <div class="summary-divider"></div>
-    <div class="summary-item">
-      <div class="summary-label">Fund NAV</div>
-      <div class="summary-value neutral" id="fundNAV" style="font-size:28px">—</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:0.04em" id="navDate"></div>
-    </div>
-    <div class="summary-divider"></div>
-    <div class="summary-item">
-      <div class="summary-label">Reported Move</div>
-      <div class="summary-value neutral" id="reportedMove" style="font-size:28px">—</div>
-    </div>
+    <div class="coverage-bar"><div class="coverage-fill" id="coverageFill" style="width:0%"></div></div>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
