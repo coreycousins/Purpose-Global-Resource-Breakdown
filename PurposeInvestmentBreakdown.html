@@ -990,9 +990,9 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     </div>
     <div class="sector-header-row" id="sectorHeaderRow">
       <span data-col="sector" onclick="setSectorSort('sector')">Sector<span class="sort-arrow"></span></span>
-      <span class="col-right" data-col="weight" onclick="setSectorSort('weight')">Weight<span class="sort-arrow sort-active"> ▼</span></span>
+      <span class="col-right" data-col="weight" onclick="setSectorSort('weight')">Weight<span class="sort-arrow"></span></span>
       <span class="col-right" data-col="daypct" onclick="setSectorSort('daypct')">Day %<span class="sort-arrow"></span></span>
-      <span class="col-right" data-col="contrib" onclick="setSectorSort('contrib')">Contribution<span class="sort-arrow"></span></span>
+      <span class="col-right sort-active" data-col="contrib" onclick="setSectorSort('contrib')">Contribution<span class="sort-arrow"> ▼</span></span>
       <span class="col-right">CAD Move</span>
       <span></span>
     </div>
@@ -1340,7 +1340,7 @@ function toggleHoldings() {
 }
 
 // ── Sector sort state ────────────────────────────────────────────────────────
-let sectorSortCol = 'weight'; // default: weight descending
+let sectorSortCol = 'contrib'; // default: contribution descending
 let sectorSortDir = -1;
 
 function setSectorSort(col) {
@@ -1682,6 +1682,11 @@ function renderPieChart(sectors, mode) {
       colorMap[s.label] = pal[clsIdx[s.cls]++ % pal.length];
     });
   }
+
+  // Sort slices largest-first so the chart order matches the table
+  slices.sort((a, b) => isContrib
+    ? Math.abs(b.totalContrib) - Math.abs(a.totalContrib)
+    : b.totalWeight - a.totalWeight);
 
   // Build slice geometry
   let angle = -Math.PI / 2;
