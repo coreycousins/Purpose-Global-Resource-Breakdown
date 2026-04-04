@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v2.11</title>
+<title>Purpose Global Resources — Daily Attribution v3.0</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -165,19 +165,20 @@ background: var(--card-bg);
 border: 1px solid var(--border);
 padding: 0;
 margin-bottom: 36px;
-display: grid;
-grid-template-columns: auto 1px 1fr 1px auto 1px auto 1px auto 1px auto;
+display: flex;
 align-items: stretch;
 overflow: hidden;
 }
 
 .summary-item {
 padding: 22px 18px;
+flex: 0 0 auto;
 }
 
 .summary-divider {
 background: var(--border);
 width: 1px;
+flex-shrink: 0;
 }
 
 .summary-label {
@@ -190,8 +191,8 @@ margin-bottom: 10px;
 
 .summary-value {
 font-family: 'Fraunces', serif;
-font-size: 40px;
-font-weight: 600;
+font-size: 32px;
+font-weight: 300;
 letter-spacing: -0.03em;
 line-height: 1;
 }
@@ -273,7 +274,7 @@ display: none;
 .section-label {
 font-size: 9.5px;
 letter-spacing: 0.18em;
-color: var(--muted);
+color: var(--label);
 text-transform: uppercase;
 margin-bottom: 10px;
 padding-left: 14px;
@@ -471,14 +472,24 @@ position: absolute;
 top: 14px;
 right: 16px;
 background: none;
-border: none;
+border: 1px solid transparent;
+border-radius: 50%;
 color: var(--muted);
-font-size: 18px;
+font-size: 13px;
 cursor: pointer;
-line-height: 1;
-padding: 2px 6px;
+width: 24px;
+height: 24px;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 0;
+transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.modal-close:hover { color: var(--text); }
+.modal-close:hover {
+color: var(--text);
+border-color: var(--border-light);
+background: rgba(255,255,255,0.04);
+}
 
 .modal-tag {
 font-size: 9px;
@@ -710,10 +721,10 @@ letter-spacing: 0.02em;
 
 /* ── Responsive ── */
 @media (max-width: 900px) and (orientation: landscape) {
-/* Summary strip: 3-col grid, 2 rows */
-.summary-card { grid-template-columns: 1fr 1fr 1fr; overflow: visible; }
+/* Summary strip: wrap to multi-row */
+.summary-card { flex-wrap: wrap; overflow: visible; }
 .summary-divider { display: none; }
-.summary-item { padding: 12px 14px; min-width: 0 !important; }
+.summary-item { padding: 12px 14px; flex: 1 1 30%; min-width: 0 !important; border-bottom: 1px solid var(--border); }
 .summary-value { font-size: 24px; }
 }
 
@@ -726,10 +737,10 @@ letter-spacing: 0.02em;
 .header { flex-direction: column; align-items: flex-start; gap: 12px; }
 .header-right { align-items: flex-start; }
 
-/* Summary strip: 2-col grid, all 6 items in 3 rows */
-.summary-card { grid-template-columns: 1fr 1fr; }
+/* Summary strip: wrap 2-col */
+.summary-card { flex-wrap: wrap; }
 .summary-divider { display: none; }
-.summary-item { padding: 14px 12px; min-width: 0 !important; }
+.summary-item { padding: 14px 12px; flex: 1 1 45%; min-width: 0 !important; border-bottom: 1px solid var(--border); }
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
@@ -814,7 +825,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v2.11</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v3.0</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
@@ -851,7 +862,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <div class="summary-value neutral" id="totalMove">—</div>
     </div>
     <div class="summary-divider"></div>
-    <div class="summary-item" style="min-width:200px">
+    <div class="summary-item" style="flex:1;min-width:180px">
       <div class="summary-label">Coverage</div>
       <div class="coverage-meta">
         <span id="coveredPct">0%</span>
@@ -886,7 +897,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
 
   <!-- Sector Attribution -->
 
-  <div class="section-label sector-toggle-label" onclick="toggleSectors()">
+  <div class="section-label sector-toggle-label" style="margin-top:44px" onclick="toggleSectors()">
     Sector Attribution
     <span id="sectorToggle" style="font-size:8px;opacity:0.55;margin-left:2px">▼ expand</span>
   </div>
@@ -915,7 +926,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
 
   <!-- Table -->
 
-  <div class="section-label">Holdings</div>
+  <div class="section-label" style="margin-top:36px">Holdings</div>
   <div class="table-header-row" id="holdingsHeader">
     <span data-col="ticker" onclick="setSort('ticker')">Ticker<span class="sort-arrow"></span></span>
     <span data-col="issuer" onclick="setSort('issuer')">Issuer<span class="sort-arrow"></span></span>
@@ -1644,6 +1655,10 @@ document.getElementById('modalOverlay').classList.remove('hidden');
 
 document.addEventListener('keydown', function(e) {
 if (e.key === 'Escape') closeModal();
+if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+  var panel = document.getElementById('debugPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
 });
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1654,8 +1669,8 @@ setInterval(render, 60000);
 });
 </script>
 
-<!-- DEBUG PANEL -->
-<div id="debugPanel" style="background:#1a1a1a;border:2px solid #888;color:#aaa;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
+<!-- DEBUG PANEL — toggle with Ctrl+Shift+D -->
+<div id="debugPanel" style="display:none;background:#1a1a1a;border:2px solid #888;color:#aaa;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
   <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
     <span>DEBUG — expand to see debug info</span>
     <span id="debugToggle" style="font-size:10px;opacity:0.6;">▼ expand</span>
