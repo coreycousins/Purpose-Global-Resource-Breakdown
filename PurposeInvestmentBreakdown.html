@@ -711,8 +711,42 @@ color: var(--text);
   border-top: 1px solid var(--border);
   margin-top: 4px;
 }
-#sectorPieCanvas {
+.pie-canvas-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
+}
+.pie-toggle {
+  display: flex;
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  border-radius: 2px;
+}
+.pie-toggle-btn {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border-light);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pie-toggle-btn:last-child { border-right: none; }
+.pie-toggle-btn.active {
+  background: rgba(77,175,207,0.1);
+  color: var(--accent);
+}
+.pie-toggle-btn:hover:not(.active) {
+  color: var(--text);
+  background: rgba(255,255,255,0.03);
+}
+#sectorPieCanvas {
   cursor: crosshair;
 }
 .pie-legend {
@@ -964,7 +998,13 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     </div>
     <div id="sectorTable"></div>
     <div class="pie-wrap">
-      <canvas id="sectorPieCanvas" width="240" height="240" style="width:240px;height:240px"></canvas>
+      <div class="pie-canvas-col">
+        <div class="pie-toggle">
+          <button class="pie-toggle-btn active" id="pieBtnWeight" onclick="setPieMode('weight')">Weight</button>
+          <button class="pie-toggle-btn" id="pieBtnContrib" onclick="setPieMode('contrib')">Attribution</button>
+        </div>
+        <canvas id="sectorPieCanvas" width="240" height="240" style="width:240px;height:240px"></canvas>
+      </div>
       <div id="sectorPieLegend" class="pie-legend"></div>
     </div>
   </div>
@@ -1561,10 +1601,21 @@ sectors.forEach(s => {
   tbody.appendChild(row);
 });
 
-renderPieChart(sectors);
+pieSectors = sectors;
+renderPieChart(sectors, pieMode);
 }
 
 // ── Sector pie chart ─────────────────────────────────────────────────────────
+let pieMode    = 'weight';
+let pieSectors = null;
+
+function setPieMode(mode) {
+  pieMode = mode;
+  document.getElementById('pieBtnWeight').classList.toggle('active', mode === 'weight');
+  document.getElementById('pieBtnContrib').classList.toggle('active', mode === 'contrib');
+  if (pieSectors) renderPieChart(pieSectors, mode);
+}
+
 const CLS_PALETTES = {
   energy:   [[77,175,207],[47,140,170],[108,200,230],[28,108,142],[142,216,240],[16,82,108]],
   metals:   [[180,140,255],[143,104,214],[214,174,255]],
@@ -1572,15 +1623,17 @@ const CLS_PALETTES = {
   cash:     [[106,136,152],[78,108,126]],
   unlisted: [[62,80,96],[44,58,74]],
 };
+const CONTRIB_POS = [[52,201,122],[30,163,88],[82,226,150],[18,130,65],[110,235,165],[12,100,50]];
+const CONTRIB_NEG = [[232,79,79],[195,50,50],[255,115,115],[160,35,35],[240,135,135],[120,25,25]];
 
-function renderPieChart(sectors) {
+function renderPieChart(sectors, mode) {
   const canvas = document.getElementById('sectorPieCanvas');
   const legend = document.getElementById('sectorPieLegend');
   if (!canvas || !legend) return;
 
-  const ctx    = canvas.getContext('2d');
-  const dpr    = window.devicePixelRatio || 1;
-  const SIZE   = 240;
+  const ctx  = canvas.getContext('2d');
+  const dpr  = window.devicePixelRatio || 1;
+  const SIZE = 240;
   canvas.width  = SIZE * dpr;
   canvas.height = SIZE * dpr;
   canvas.style.width  = SIZE + 'px';
@@ -1591,41 +1644,71 @@ function renderPieChart(sectors) {
   const outerR = SIZE / 2 - 14;
   const innerR = outerR * 0.46;
 
-  const slices = sectors.filter(s => s.totalWeight > 0);
-  const total  = slices.reduce((sum, s) => sum + s.totalWeight, 0);
-  if (total === 0) return;
+  const isContrib = mode === 'contrib';
 
-  // Assign colors — cycle through palette per cls in order encountered
-  const clsIdx = {};
+  // Weight mode: all sectors with weight
+  // Contrib mode: only sectors with coverage, sized by absolute contribution
+  let slices, total;
+  if (isContrib) {
+    slices = sectors.filter(s => s.coveredWeight > 0 && Math.abs(s.totalContrib) > 0.0001);
+    total  = slices.reduce((sum, s) => sum + Math.abs(s.totalContrib), 0);
+  } else {
+    slices = sectors.filter(s => s.totalWeight > 0);
+    total  = slices.reduce((sum, s) => sum + s.totalWeight, 0);
+  }
+  if (total === 0) {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#3e5060'; ctx.font = `9px 'DM Mono', monospace`;
+    ctx.fillText('NO DATA', cx, cy);
+    legend.innerHTML = '';
+    return;
+  }
+
+  // Color assignment
   const colorMap = {};
-  slices.forEach(s => {
-    if (clsIdx[s.cls] === undefined) clsIdx[s.cls] = 0;
-    const pal = CLS_PALETTES[s.cls] || [[120,120,140]];
-    colorMap[s.label] = pal[clsIdx[s.cls] % pal.length];
-    clsIdx[s.cls]++;
-  });
+  if (isContrib) {
+    // positive = green shades, negative = red shades (cycle per direction)
+    let posIdx = 0, negIdx = 0;
+    slices.forEach(s => {
+      if (s.totalContrib >= 0) { colorMap[s.label] = CONTRIB_POS[posIdx++ % CONTRIB_POS.length]; }
+      else                     { colorMap[s.label] = CONTRIB_NEG[negIdx++ % CONTRIB_NEG.length]; }
+    });
+  } else {
+    const clsIdx = {};
+    slices.forEach(s => {
+      if (clsIdx[s.cls] === undefined) clsIdx[s.cls] = 0;
+      const pal = CLS_PALETTES[s.cls] || [[120,120,140]];
+      colorMap[s.label] = pal[clsIdx[s.cls]++ % pal.length];
+    });
+  }
 
   // Build slice geometry
   let angle = -Math.PI / 2;
   const sliceData = slices.map(s => {
-    const sweep = (s.totalWeight / total) * Math.PI * 2;
+    const magnitude = isContrib ? Math.abs(s.totalContrib) : s.totalWeight;
+    const sweep = (magnitude / total) * Math.PI * 2;
     const d = { ...s, startAngle: angle, endAngle: angle + sweep,
                 midAngle: angle + sweep / 2, rgb: colorMap[s.label] };
     angle += sweep;
     return d;
   });
 
-  // Build legend HTML
+  // Legend
   legend.innerHTML = sliceData.map((s, i) => {
-    const [r,g,b]   = s.rgb;
-    const hasCov     = s.coveredWeight > 0;
-    const sign       = s.totalContrib >= 0 ? '+' : '';
-    const contribCls = s.totalContrib > 0.0001 ? 'pos' : s.totalContrib < -0.0001 ? 'neg' : 'zero';
+    const [r,g,b]    = s.rgb;
+    const sign        = s.totalContrib >= 0 ? '+' : '';
+    const contribCls  = s.totalContrib > 0.0001 ? 'pos' : s.totalContrib < -0.0001 ? 'neg' : 'zero';
+    const primaryVal  = isContrib
+      ? `<span class="pie-legend-contrib ${contribCls}">${sign}${s.totalContrib.toFixed(3)}%</span>`
+      : `<span class="pie-legend-weight">${(s.totalWeight*100).toFixed(1)}%</span>`;
+    const secondaryVal = isContrib
+      ? `<span class="pie-legend-weight">${(s.totalWeight*100).toFixed(1)}%</span>`
+      : `<span class="pie-legend-contrib ${contribCls}">${s.coveredWeight > 0 ? sign+s.totalContrib.toFixed(3)+'%' : '—'}</span>`;
     return `<div class="pie-legend-row" data-idx="${i}">
       <span class="pie-legend-dot" style="background:rgb(${r},${g},${b})"></span>
       <span class="pie-legend-name">${s.label}</span>
-      <span class="pie-legend-weight">${(s.totalWeight*100).toFixed(1)}%</span>
-      <span class="pie-legend-contrib ${hasCov ? contribCls : 'zero'}">${hasCov ? sign+s.totalContrib.toFixed(3)+'%' : '—'}</span>
+      ${primaryVal}${secondaryVal}
     </div>`;
   }).join('');
 
@@ -1661,23 +1744,36 @@ function renderPieChart(sectors) {
     ctx.textBaseline = 'middle';
     if (hov >= 0) {
       const s = sliceData[hov];
-      ctx.fillStyle = '#dde8ee';
-      ctx.font = `500 14px 'DM Mono', monospace`;
-      ctx.fillText((s.totalWeight * 100).toFixed(1) + '%', cx, cy - 12);
-      ctx.fillStyle = '#6a8898';
-      ctx.font = `9.5px 'DM Mono', monospace`;
-      ctx.fillText(s.label, cx, cy + 3);
-      if (s.coveredWeight > 0) {
-        const sign = s.totalContrib >= 0 ? '+' : '';
-        const [r,g,b] = s.totalContrib > 0.0001 ? [52,201,122] : s.totalContrib < -0.0001 ? [232,79,79] : [62,80,96];
+      const sign = s.totalContrib >= 0 ? '+' : '';
+      if (isContrib) {
+        const [r,g,b] = s.totalContrib > 0.0001 ? [52,201,122] : [232,79,79];
         ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.font = `10.5px 'DM Mono', monospace`;
-        ctx.fillText(sign + s.totalContrib.toFixed(3) + '%', cx, cy + 18);
+        ctx.font = `500 14px 'DM Mono', monospace`;
+        ctx.fillText(sign + s.totalContrib.toFixed(3) + '%', cx, cy - 12);
+        ctx.fillStyle = '#6a8898';
+        ctx.font = `9.5px 'DM Mono', monospace`;
+        ctx.fillText(s.label, cx, cy + 3);
+        ctx.fillStyle = '#3e5060';
+        ctx.font = `9px 'DM Mono', monospace`;
+        ctx.fillText((s.totalWeight*100).toFixed(1) + '% wt', cx, cy + 18);
+      } else {
+        ctx.fillStyle = '#dde8ee';
+        ctx.font = `500 14px 'DM Mono', monospace`;
+        ctx.fillText((s.totalWeight*100).toFixed(1) + '%', cx, cy - 12);
+        ctx.fillStyle = '#6a8898';
+        ctx.font = `9.5px 'DM Mono', monospace`;
+        ctx.fillText(s.label, cx, cy + 3);
+        if (s.coveredWeight > 0) {
+          const [r,g,b] = s.totalContrib > 0.0001 ? [52,201,122] : s.totalContrib < -0.0001 ? [232,79,79] : [62,80,96];
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.font = `10.5px 'DM Mono', monospace`;
+          ctx.fillText(sign + s.totalContrib.toFixed(3) + '%', cx, cy + 18);
+        }
       }
     } else {
       ctx.fillStyle = '#3e5060';
       ctx.font = `8.5px 'DM Mono', monospace`;
-      ctx.fillText('ALLOCATION', cx, cy);
+      ctx.fillText(isContrib ? 'ATTRIBUTION' : 'ALLOCATION', cx, cy);
     }
   }
 
@@ -1686,9 +1782,10 @@ function renderPieChart(sectors) {
   function hitTest(mx, my) {
     const dist = Math.sqrt(mx*mx + my*my);
     if (dist < innerR - 2 || dist > outerR + 12) return -1;
-    const a = normalizeAngle(Math.atan2(my, mx));
-    const i = sliceData.findIndex(s => a >= s.startAngle && a < s.endAngle);
-    return i;
+    return sliceData.findIndex(s => {
+      const a = normalizeAngle(Math.atan2(my, mx));
+      return a >= s.startAngle && a < s.endAngle;
+    });
   }
 
   function syncLegend(idx) {
