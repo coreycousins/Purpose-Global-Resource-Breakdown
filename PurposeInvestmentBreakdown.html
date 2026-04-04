@@ -1655,7 +1655,7 @@ document.getElementById('modalOverlay').classList.remove('hidden');
 
 document.addEventListener('keydown', function(e) {
 if (e.key === 'Escape') closeModal();
-if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+if (e.ctrlKey && e.key === '`') {
   var panel = document.getElementById('debugPanel');
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
@@ -1669,7 +1669,7 @@ setInterval(render, 60000);
 });
 </script>
 
-<!-- DEBUG PANEL — toggle with Ctrl+Shift+D -->
+<!-- DEBUG PANEL — toggle with Ctrl+` -->
 <div id="debugPanel" style="display:none;background:#1a1a1a;border:2px solid #888;color:#aaa;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
   <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
     <span>DEBUG — expand to see debug info</span>
