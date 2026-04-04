@@ -702,6 +702,65 @@ color: var(--text);
   animation: blink 1.4s ease infinite;
 }
 
+/* ── Pie chart ── */
+.pie-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 20px 14px 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+#sectorPieCanvas {
+  flex-shrink: 0;
+  cursor: crosshair;
+}
+.pie-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 2px;
+  align-self: center;
+}
+.pie-legend-row {
+  display: grid;
+  grid-template-columns: 8px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  cursor: default;
+  transition: background 0.1s;
+  border-radius: 2px;
+}
+.pie-legend-row:hover,
+.pie-legend-row.pie-legend-active { background: rgba(255,255,255,0.04); }
+.pie-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pie-legend-name {
+  font-size: 10.5px;
+  color: var(--label);
+  letter-spacing: 0.02em;
+}
+.pie-legend-weight {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  min-width: 34px;
+}
+.pie-legend-contrib {
+  font-size: 10px;
+  text-align: right;
+  min-width: 46px;
+}
+.pie-legend-contrib.pos  { color: var(--green); }
+.pie-legend-contrib.neg  { color: var(--red); }
+.pie-legend-contrib.zero { color: var(--muted); }
+
 /* ── Footer ── */
 .footer-note {
 margin-top: 28px;
@@ -904,6 +963,10 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <span></span>
     </div>
     <div id="sectorTable"></div>
+    <div class="pie-wrap">
+      <canvas id="sectorPieCanvas" width="240" height="240" style="width:240px;height:240px"></canvas>
+      <div id="sectorPieLegend" class="pie-legend"></div>
+    </div>
   </div>
 
   <!-- Table -->
@@ -1497,6 +1560,158 @@ sectors.forEach(s => {
   row.addEventListener('click', function() { openSectorModal(s); });
   tbody.appendChild(row);
 });
+
+renderPieChart(sectors);
+}
+
+// ── Sector pie chart ─────────────────────────────────────────────────────────
+const CLS_PALETTES = {
+  energy:   [[77,175,207],[47,140,170],[108,200,230],[28,108,142],[142,216,240],[16,82,108]],
+  metals:   [[180,140,255],[143,104,214],[214,174,255]],
+  lithium:  [[52,201,122],[30,163,88],[82,226,150]],
+  cash:     [[106,136,152],[78,108,126]],
+  unlisted: [[62,80,96],[44,58,74]],
+};
+
+function renderPieChart(sectors) {
+  const canvas = document.getElementById('sectorPieCanvas');
+  const legend = document.getElementById('sectorPieLegend');
+  if (!canvas || !legend) return;
+
+  const ctx    = canvas.getContext('2d');
+  const dpr    = window.devicePixelRatio || 1;
+  const SIZE   = 240;
+  canvas.width  = SIZE * dpr;
+  canvas.height = SIZE * dpr;
+  canvas.style.width  = SIZE + 'px';
+  canvas.style.height = SIZE + 'px';
+  ctx.scale(dpr, dpr);
+
+  const cx = SIZE / 2, cy = SIZE / 2;
+  const outerR = SIZE / 2 - 14;
+  const innerR = outerR * 0.46;
+
+  const slices = sectors.filter(s => s.totalWeight > 0);
+  const total  = slices.reduce((sum, s) => sum + s.totalWeight, 0);
+  if (total === 0) return;
+
+  // Assign colors — cycle through palette per cls in order encountered
+  const clsIdx = {};
+  const colorMap = {};
+  slices.forEach(s => {
+    if (clsIdx[s.cls] === undefined) clsIdx[s.cls] = 0;
+    const pal = CLS_PALETTES[s.cls] || [[120,120,140]];
+    colorMap[s.label] = pal[clsIdx[s.cls] % pal.length];
+    clsIdx[s.cls]++;
+  });
+
+  // Build slice geometry
+  let angle = -Math.PI / 2;
+  const sliceData = slices.map(s => {
+    const sweep = (s.totalWeight / total) * Math.PI * 2;
+    const d = { ...s, startAngle: angle, endAngle: angle + sweep,
+                midAngle: angle + sweep / 2, rgb: colorMap[s.label] };
+    angle += sweep;
+    return d;
+  });
+
+  // Build legend HTML
+  legend.innerHTML = sliceData.map((s, i) => {
+    const [r,g,b]   = s.rgb;
+    const hasCov     = s.coveredWeight > 0;
+    const sign       = s.totalContrib >= 0 ? '+' : '';
+    const contribCls = s.totalContrib > 0.0001 ? 'pos' : s.totalContrib < -0.0001 ? 'neg' : 'zero';
+    return `<div class="pie-legend-row" data-idx="${i}">
+      <span class="pie-legend-dot" style="background:rgb(${r},${g},${b})"></span>
+      <span class="pie-legend-name">${s.label}</span>
+      <span class="pie-legend-weight">${(s.totalWeight*100).toFixed(1)}%</span>
+      <span class="pie-legend-contrib ${hasCov ? contribCls : 'zero'}">${hasCov ? sign+s.totalContrib.toFixed(3)+'%' : '—'}</span>
+    </div>`;
+  }).join('');
+
+  let hoveredIdx = -1;
+
+  function normalizeAngle(a) {
+    const base = -Math.PI / 2, range = Math.PI * 2;
+    while (a < base)        a += range;
+    while (a >= base+range) a -= range;
+    return a;
+  }
+
+  function draw(hov) {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    sliceData.forEach((s, i) => {
+      const hot = i === hov;
+      const exp = hot ? 9 : 0;
+      const ox  = Math.cos(s.midAngle) * exp;
+      const oy  = Math.sin(s.midAngle) * exp;
+      const [r,g,b] = s.rgb;
+      ctx.beginPath();
+      ctx.arc(cx+ox, cy+oy, outerR, s.startAngle, s.endAngle);
+      ctx.arc(cx+ox, cy+oy, innerR, s.endAngle, s.startAngle, true);
+      ctx.closePath();
+      ctx.fillStyle = hot ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},0.78)`;
+      ctx.fill();
+      ctx.strokeStyle = '#090c0e';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    if (hov >= 0) {
+      const s = sliceData[hov];
+      ctx.fillStyle = '#dde8ee';
+      ctx.font = `500 14px 'DM Mono', monospace`;
+      ctx.fillText((s.totalWeight * 100).toFixed(1) + '%', cx, cy - 12);
+      ctx.fillStyle = '#6a8898';
+      ctx.font = `9.5px 'DM Mono', monospace`;
+      ctx.fillText(s.label, cx, cy + 3);
+      if (s.coveredWeight > 0) {
+        const sign = s.totalContrib >= 0 ? '+' : '';
+        const [r,g,b] = s.totalContrib > 0.0001 ? [52,201,122] : s.totalContrib < -0.0001 ? [232,79,79] : [62,80,96];
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.font = `10.5px 'DM Mono', monospace`;
+        ctx.fillText(sign + s.totalContrib.toFixed(3) + '%', cx, cy + 18);
+      }
+    } else {
+      ctx.fillStyle = '#3e5060';
+      ctx.font = `8.5px 'DM Mono', monospace`;
+      ctx.fillText('ALLOCATION', cx, cy);
+    }
+  }
+
+  draw(-1);
+
+  function hitTest(mx, my) {
+    const dist = Math.sqrt(mx*mx + my*my);
+    if (dist < innerR - 2 || dist > outerR + 12) return -1;
+    const a = normalizeAngle(Math.atan2(my, mx));
+    const i = sliceData.findIndex(s => a >= s.startAngle && a < s.endAngle);
+    return i;
+  }
+
+  function syncLegend(idx) {
+    legend.querySelectorAll('.pie-legend-row').forEach((row, i) => {
+      row.classList.toggle('pie-legend-active', i === idx);
+    });
+  }
+
+  canvas.onmousemove = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width * SIZE - cx;
+    const my = (e.clientY - rect.top)  / rect.height * SIZE - cy;
+    const found = hitTest(mx, my);
+    if (found !== hoveredIdx) { hoveredIdx = found; draw(found); syncLegend(found); }
+  };
+  canvas.onmouseleave = function() {
+    if (hoveredIdx !== -1) { hoveredIdx = -1; draw(-1); syncLegend(-1); }
+  };
+
+  legend.querySelectorAll('.pie-legend-row').forEach((row, i) => {
+    row.onmouseenter = () => { hoveredIdx = i; draw(i); syncLegend(i); };
+    row.onmouseleave = () => { hoveredIdx = -1; draw(-1); syncLegend(-1); };
+  });
 }
 
 // ── Price fetch ──────────────────────────────────────────────────────────────
