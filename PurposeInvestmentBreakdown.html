@@ -916,30 +916,35 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
 
   <!-- Table -->
 
-  <div class="section-label" style="margin-top:36px">Holdings</div>
-  <div class="sector-summary">
-    <div class="sector-summary-item">
-      <div class="summary-label">Top Contributing Holding</div>
-      <div class="top-label pos" id="topContrib">—</div>
-    </div>
-    <div class="sector-summary-divider"></div>
-    <div class="sector-summary-item">
-      <div class="summary-label">Top Drag Holding</div>
-      <div class="top-label neg" id="topDrag">—</div>
-    </div>
+  <div class="section-label sector-toggle-label" style="margin-top:36px" onclick="toggleHoldings()">
+    Holdings
+    <span id="holdingsToggle" style="font-size:8px;opacity:0.55;margin-left:2px">▲ collapse</span>
   </div>
-  <div class="table-header-row" id="holdingsHeader">
-    <span data-col="ticker" onclick="setSort('ticker')">Ticker<span class="sort-arrow"></span></span>
-    <span data-col="issuer" onclick="setSort('issuer')">Issuer<span class="sort-arrow"></span></span>
-    <span data-col="sector" onclick="setSort('sector')">Sector<span class="sort-arrow"></span></span>
-    <span class="col-right sort-active" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"> ▼</span></span>
-    <span class="col-right" data-col="daypct" onclick="setSort('daypct')">Day %<span class="sort-arrow"></span></span>
-    <span class="col-right" data-col="age" onclick="setSort('age')">Age<span class="sort-arrow"></span></span>
-    <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
-    <span class="col-right">CAD Move</span>
-    <span></span>
+  <div id="holdingsPanel">
+    <div class="sector-summary">
+      <div class="sector-summary-item">
+        <div class="summary-label">Top Contributing Holding</div>
+        <div class="top-label pos" id="topContrib">—</div>
+      </div>
+      <div class="sector-summary-divider"></div>
+      <div class="sector-summary-item">
+        <div class="summary-label">Top Drag Holding</div>
+        <div class="top-label neg" id="topDrag">—</div>
+      </div>
+    </div>
+    <div class="table-header-row" id="holdingsHeader">
+      <span data-col="ticker" onclick="setSort('ticker')">Ticker<span class="sort-arrow"></span></span>
+      <span data-col="issuer" onclick="setSort('issuer')">Issuer<span class="sort-arrow"></span></span>
+      <span data-col="sector" onclick="setSort('sector')">Sector<span class="sort-arrow"></span></span>
+      <span class="col-right sort-active" data-col="weight" onclick="setSort('weight')">Weight<span class="sort-arrow"> ▼</span></span>
+      <span class="col-right" data-col="daypct" onclick="setSort('daypct')">Day %<span class="sort-arrow"></span></span>
+      <span class="col-right" data-col="age" onclick="setSort('age')">Age<span class="sort-arrow"></span></span>
+      <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
+      <span class="col-right">CAD Move</span>
+      <span></span>
+    </div>
+    <div id="holdingsTable"></div>
   </div>
-  <div id="holdingsTable"></div>
 
   <div class="footer-note">
     Prices via Yahoo Finance (15–20 min delay). Returns in native currency — CAD for TSX, USD for NYSE/NASDAQ.
@@ -1224,11 +1229,19 @@ function updatePositionBar(totalContrib) {
 }
 
 // ── Sector panel toggle ──────────────────────────────────────────────────────
-let sectorsExpanded = false;
+let sectorsExpanded  = false;
+let holdingsExpanded = true;
+
 function toggleSectors() {
   sectorsExpanded = !sectorsExpanded;
   document.getElementById('sectorPanel').style.display = sectorsExpanded ? 'block' : 'none';
   document.getElementById('sectorToggle').textContent  = sectorsExpanded ? '▲ collapse' : '▼ expand';
+}
+
+function toggleHoldings() {
+  holdingsExpanded = !holdingsExpanded;
+  document.getElementById('holdingsPanel').style.display = holdingsExpanded ? 'block' : 'none';
+  document.getElementById('holdingsToggle').textContent  = holdingsExpanded ? '▲ collapse' : '▼ expand';
 }
 
 // ── Sector sort state ────────────────────────────────────────────────────────
