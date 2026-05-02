@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purpose Global Resource Fund — NAV History</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --surface2: #1a1e25;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaed;
+    --muted: #6b7280;
+    --accent: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-left {}
+
+  .ticker-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.2);
+    padding: 2px 8px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--muted); font-weight: 300; }
+
+  .status-bar {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-dot.loading { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.err { background: var(--red); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .last-updated {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .stat-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .positive { color: var(--green); }
+  .negative { color: var(--red); }
+
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .chart-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .chart-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .btn-group { display: flex; gap: 4px; }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  .btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
+
+  .chart-wrap { position: relative; height: 300px; }
+
+  .big-moves {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .moves-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .move-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 80px 120px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+
+  .move-date {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .move-bar-wrap {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .move-bar { height: 100%; border-radius: 2px; }
+
+  .move-pct {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .move-nav {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    line-height: 1.7;
+  }
+
+  .note strong { color: var(--amber); font-weight: 500; }
+
+  footer {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-left">
+      <div class="ticker-tag">0P000077OC.TO · TSX · CAD</div>
+      <h1>Purpose Global Resource Fund <span>Series F</span></h1>
+      <div class="status-bar">
+        <div class="status-dot loading" id="dot"></div>
+        <span id="status-text">Connecting to Yahoo Finance...</span>
+      </div>
+    </div>
+    <div class="last-updated" id="last-updated"></div>
+  </header>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Current NAV</div>
+      <div class="stat-value" id="s-cur">—</div>
+      <div class="stat-sub" id="s-cur-date">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">60-day range</div>
+      <div class="stat-value" id="s-range" style="font-size:15px; padding-top:4px;">—</div>
+      <div class="stat-sub" id="s-range-sub">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">60-day return</div>
+      <div class="stat-value" id="s-ret">—</div>
+      <div class="stat-sub" id="s-ret-sub">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg daily move</div>
+      <div class="stat-value" id="s-avg">—</div>
+      <div class="stat-sub" id="s-avg-sub">—</div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-toolbar">
+      <div class="chart-title" id="chart-label">NAV price (CAD)</div>
+      <div class="btn-group">
+        <button class="btn active" onclick="setView('price')">price</button>
+        <button class="btn" onclick="setView('change')">daily %</button>
+        <button class="btn" onclick="setView('cumret')">cumulative</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="navChart" role="img" aria-label="Purpose Global Resource Fund NAV history"></canvas>
+    </div>
+  </div>
+
+  <div class="big-moves">
+    <div class="section-title">Largest daily moves — training signal candidates</div>
+    <div class="moves-list" id="moves-list">
+      <div style="font-family: var(--mono); font-size: 12px; color: var(--muted);">Loading...</div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Note on lag:</strong> Mutual fund NAV on Yahoo Finance can carry a 1-day reporting lag.
+    Cross-check 2–3 known dates against your Purpose account statements before aligning
+    news articles to price moves in the sentiment training pipeline. If there's a consistent lag,
+    shift your news window to <em>prior day's articles → today's NAV change</em>.
+  </div>
+
+  <footer>
+    <span>data: Yahoo Finance · ticker: 0P000077OC.TO</span>
+    <span id="footer-time"></span>
+  </footer>
+
+</div>
+
+<script>
+const TICKER = '0P000077OC.TO';
+let chartInstance = null;
+let allLabels = [], allDates = [], allPrices = [], allChanges = [], allCumRet = [];
+let currentView = 'price';
+
+function setStatus(msg, state) {
+  document.getElementById('status-text').textContent = msg;
+  const dot = document.getElementById('dot');
+  dot.className = 'status-dot ' + state;
+}
+
+async function fetchNAV() {
+  const end = Math.floor(Date.now() / 1000);
+  const start = end - (90 * 86400);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${TICKER}?interval=1d&period1=${start}&period2=${end}`;
+
+  const proxies = [
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => u,
+  ];
+
+  let json = null;
+  for (const proxy of proxies) {
+    try {
+      setStatus(`Trying ${proxy(url).split('?')[0].replace('https://','').split('/')[0]}...`, 'loading');
+      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) continue;
+      const text = await res.text();
+      const parsed = JSON.parse(text);
+      if (parsed?.chart?.result) { json = parsed; break; }
+    } catch(e) { continue; }
+  }
+
+  if (!json) {
+    setStatus('Failed — check console. Try opening DevTools and refreshing.', 'err');
+    document.getElementById('moves-list').innerHTML =
+      '<div style="font-family:var(--mono);font-size:12px;color:var(--red);">Could not reach Yahoo Finance. Make sure you\'re connected to the internet and try refreshing the page.</div>';
+    return;
+  }
+
+  const result = json.chart.result[0];
+  const timestamps = result.timestamp;
+  const closes = result.indicators.quote[0].close;
+
+  const pairs = timestamps
+    .map((t, i) => ({ ts: t, date: new Date(t * 1000), price: closes[i] }))
+    .filter(p => p.price !== null && p.price !== undefined)
+    .slice(-62);
+
+  allDates  = pairs.map(p => p.date);
+  allLabels = pairs.map(p => p.date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }));
+  allPrices = pairs.map(p => parseFloat(p.price.toFixed(4)));
+  allChanges = allPrices.map((p, i) =>
+    i === 0 ? 0 : parseFloat(((p - allPrices[i-1]) / allPrices[i-1] * 100).toFixed(4))
+  );
+
+  const base = allPrices[0];
+  allCumRet = allPrices.map(p => parseFloat(((p - base) / base * 100).toFixed(4)));
+
+  updateStats();
+  renderChart('price');
+  renderBigMoves();
+
+  const now = new Date();
+  setStatus(`${pairs.length} trading days loaded · as of ${now.toLocaleTimeString()}`, 'ok');
+  document.getElementById('last-updated').textContent =
+    `Fetched ${now.toLocaleDateString('en-CA', {month:'short',day:'numeric',year:'numeric'})}`;
+  document.getElementById('footer-time').textContent =
+    `generated ${now.toISOString().slice(0,19).replace('T',' ')} local`;
+}
+
+function updateStats() {
+  const cur   = allPrices[allPrices.length - 1];
+  const prev  = allPrices[allPrices.length - 2];
+  const first = allPrices[0];
+  const min   = Math.min(...allPrices);
+  const max   = Math.max(...allPrices);
+  const ret   = ((cur - first) / first * 100);
+  const dayChg = ((cur - prev) / prev * 100);
+  const avgMove = allChanges.slice(1).reduce((a,b) => a + Math.abs(b), 0) / (allChanges.length - 1);
+  const bigDays = allChanges.filter(c => Math.abs(c) >= 1).length;
+
+  const curEl = document.getElementById('s-cur');
+  curEl.textContent = `$${cur.toFixed(2)}`;
+  const dayColor = dayChg >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('s-cur-date').innerHTML =
+    `<span style="color:${dayColor}">${dayChg >= 0 ? '+' : ''}${dayChg.toFixed(2)}% today</span>`;
+
+  document.getElementById('s-range').textContent = `$${min.toFixed(2)} – $${max.toFixed(2)}`;
+  document.getElementById('s-range-sub').textContent = `spread: $${(max - min).toFixed(2)}`;
+
+  const retEl = document.getElementById('s-ret');
+  retEl.textContent = `${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%`;
+  retEl.className = 'stat-value ' + (ret >= 0 ? 'positive' : 'negative');
+  document.getElementById('s-ret-sub').textContent =
+    `$${first.toFixed(2)} → $${cur.toFixed(2)}`;
+
+  document.getElementById('s-avg').textContent = `±${avgMove.toFixed(2)}%`;
+  document.getElementById('s-avg-sub').textContent = `${bigDays} days ≥ ±1%`;
+}
+
+function renderBigMoves() {
+  const moves = allChanges
+    .map((c, i) => ({ i, date: allLabels[i], fullDate: allDates[i], change: c, nav: allPrices[i] }))
+    .filter(m => m.i > 0)
+    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+    .slice(0, 12);
+
+  const maxAbs = Math.max(...moves.map(m => Math.abs(m.change)));
+  const weekday = d => d.toLocaleDateString('en-CA', { weekday: 'short' });
+
+  document.getElementById('moves-list').innerHTML = moves.map(m => {
+    const pct = (Math.abs(m.change) / maxAbs * 100).toFixed(1);
+    const color = m.change >= 0 ? 'var(--green)' : 'var(--red)';
+    const sign  = m.change >= 0 ? '+' : '';
+    return `
+      <div class="move-row">
+        <div class="move-date">${weekday(m.fullDate)} ${m.date}</div>
+        <div class="move-bar-wrap">
+          <div class="move-bar" style="width:${pct}%;background:${color};opacity:0.7;"></div>
+        </div>
+        <div class="move-pct" style="color:${color}">${sign}${m.change.toFixed(2)}%</div>
+        <div class="move-nav">NAV $${m.nav.toFixed(2)}</div>
+      </div>`;
+  }).join('');
+}
+
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  const labels = { price: 'NAV price (CAD)', change: 'daily % change', cumret: 'cumulative return from start' };
+  document.getElementById('chart-label').textContent = labels[view];
+  renderChart(view);
+}
+
+function renderChart(view) {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const ctx = document.getElementById('navChart').getContext('2d');
+
+  const gridColor  = 'rgba(255,255,255,0.05)';
+  const tickColor  = '#4b5563';
+  const accentBlue = '#3b82f6';
+  const green      = '#10b981';
+  const red        = '#ef4444';
+
+  if (view === 'price') {
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [{
+          label: 'NAV',
+          data: allPrices,
+          borderColor: accentBlue,
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: accentBlue,
+          fill: true,
+          backgroundColor: 'rgba(59,130,246,0.08)',
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1e25',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#9ca3af',
+            bodyColor: '#e8eaed',
+            titleFont: { family: "'IBM Plex Mono'" },
+            bodyFont: { family: "'IBM Plex Mono'", size: 13 },
+            callbacks: { label: c => ` $${c.parsed.y.toFixed(4)} CAD` }
+          }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}},
+          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `$${v.toFixed(2)}` }}
+        }
+      }
+    });
+
+  } else if (view === 'change') {
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: allLabels,
+        datasets: [{
+          label: 'Daily %',
+          data: allChanges,
+          backgroundColor: allChanges.map(c => c >= 0 ? 'rgba(16,185,129,0.65)' : 'rgba(239,68,68,0.65)'),
+          borderColor:     allChanges.map(c => c >= 0 ? green : red),
+          borderWidth: 1,
+          borderRadius: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1e25',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#9ca3af',
+            bodyColor: '#e8eaed',
+            titleFont: { family: "'IBM Plex Mono'" },
+            bodyFont: { family: "'IBM Plex Mono'", size: 13 },
+            callbacks: { label: c => ` ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(3)}%` }
+          }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}},
+          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` }}
+        }
+      }
+    });
+
+  } else {
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [{
+          label: 'Cum. return',
+          data: allCumRet,
+          borderColor: allCumRet[allCumRet.length - 1] >= 0 ? green : red,
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          fill: true,
+          backgroundColor: allCumRet[allCumRet.length - 1] >= 0
+            ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1e25',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#9ca3af',
+            bodyColor: '#e8eaed',
+            titleFont: { family: "'IBM Plex Mono'" },
+            bodyFont: { family: "'IBM Plex Mono'", size: 13 },
+            callbacks: { label: c => ` ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(3)}%` }
+          }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}},
+          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` },
+            afterDataLimits(axis) { axis.max += 0.5; axis.min -= 0.5; }
+          }
+        }
+      }
+    });
+  }
+}
+
+fetchNAV();
+</script>
+</body>
+</html>
