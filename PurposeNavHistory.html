@@ -142,7 +142,72 @@
   .positive { color: var(--green); }
   .negative { color: var(--red); }
 
-  .chart-panel {
+  .range-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px 12px;
+    margin-bottom: 16px;
+  }
+
+  .range-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .slider-track-wrap { padding: 0 8px; }
+
+  .slider-track {
+    position: relative;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    cursor: pointer;
+    margin: 10px 0;
+  }
+
+  .slider-fill {
+    position: absolute;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  .slider-thumb {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    border: 2px solid var(--accent);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    transition: transform 0.1s, border-color 0.1s;
+    z-index: 2;
+  }
+
+  .slider-thumb:hover, .slider-thumb:focus {
+    transform: translate(-50%, -50%) scale(1.25);
+    outline: none;
+    border-color: #60a5fa;
+  }
+
+  .slider-thumb:active { cursor: grabbing; }
+
+  .slider-tick-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -291,12 +356,12 @@
       <div class="stat-sub" id="s-cur-date">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">60-day range</div>
+      <div class="stat-label">range</div>
       <div class="stat-value" id="s-range" style="font-size:15px; padding-top:4px;">—</div>
       <div class="stat-sub" id="s-range-sub">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">60-day return</div>
+      <div class="stat-label">period return</div>
       <div class="stat-value" id="s-ret">—</div>
       <div class="stat-sub" id="s-ret-sub">—</div>
     </div>
@@ -305,6 +370,21 @@
       <div class="stat-value" id="s-avg">—</div>
       <div class="stat-sub" id="s-avg-sub">—</div>
     </div>
+  </div>
+
+  <div class="range-panel">
+    <div class="range-header">
+      <span class="chart-title">window</span>
+      <span id="range-label" style="font-family:var(--mono);font-size:11px;color:var(--text);"></span>
+    </div>
+    <div class="slider-track-wrap">
+      <div class="slider-track" id="slider-track">
+        <div class="slider-fill" id="slider-fill"></div>
+        <div class="slider-thumb" id="thumb-left" tabindex="0"></div>
+        <div class="slider-thumb" id="thumb-right" tabindex="0"></div>
+      </div>
+    </div>
+    <div class="slider-tick-row" id="slider-ticks"></div>
   </div>
 
   <div class="chart-panel">
@@ -345,19 +425,29 @@
 <script>
 const TICKER = '0P000077OC.TO';
 let chartInstance = null;
-let allLabels = [], allDates = [], allPrices = [], allChanges = [], allCumRet = [];
+
+// Full dataset from Yahoo
+let fullDates = [], fullLabels = [], fullPrices = [], fullChanges = [];
+
+// Current windowed slice indices into full arrays
+let winL = 0, winR = 0;
+
+// Derived from window
+let allDates = [], allLabels = [], allPrices = [], allChanges = [], allCumRet = [];
+
 let currentView = 'price';
 
+// ── Status ────────────────────────────────────────────────────────────────
 function setStatus(msg, state) {
   document.getElementById('status-text').textContent = msg;
-  const dot = document.getElementById('dot');
-  dot.className = 'status-dot ' + state;
+  document.getElementById('dot').className = 'status-dot ' + state;
 }
 
+// ── Fetch ─────────────────────────────────────────────────────────────────
 async function fetchNAV() {
-  const end = Math.floor(Date.now() / 1000);
-  const start = end - (90 * 86400);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${TICKER}?interval=1d&period1=${start}&period2=${end}`;
+  const end   = Math.floor(Date.now() / 1000);
+  const start = end - (180 * 86400); // fetch 6 months so slider has room
+  const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${TICKER}?interval=1d&period1=${start}&period2=${end}`;
 
   const proxies = [
     u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -371,41 +461,41 @@ async function fetchNAV() {
       setStatus(`Trying ${proxy(url).split('?')[0].replace('https://','').split('/')[0]}...`, 'loading');
       const res = await fetch(proxy(url), { signal: AbortSignal.timeout(10000) });
       if (!res.ok) continue;
-      const text = await res.text();
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(await res.text());
       if (parsed?.chart?.result) { json = parsed; break; }
     } catch(e) { continue; }
   }
 
   if (!json) {
-    setStatus('Failed — check console. Try opening DevTools and refreshing.', 'err');
+    setStatus('Failed — check your internet connection and refresh.', 'err');
     document.getElementById('moves-list').innerHTML =
-      '<div style="font-family:var(--mono);font-size:12px;color:var(--red);">Could not reach Yahoo Finance. Make sure you\'re connected to the internet and try refreshing the page.</div>';
+      '<div style="font-family:var(--mono);font-size:12px;color:var(--red);">Could not reach Yahoo Finance.</div>';
     return;
   }
 
-  const result = json.chart.result[0];
+  const result     = json.chart.result[0];
   const timestamps = result.timestamp;
-  const closes = result.indicators.quote[0].close;
+  const closes     = result.indicators.quote[0].close;
 
   const pairs = timestamps
-    .map((t, i) => ({ ts: t, date: new Date(t * 1000), price: closes[i] }))
-    .filter(p => p.price !== null && p.price !== undefined)
-    .slice(-62);
+    .map((t, i) => ({ date: new Date(t * 1000), price: closes[i] }))
+    .filter(p => p.price != null);
 
-  allDates  = pairs.map(p => p.date);
-  allLabels = pairs.map(p => p.date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }));
-  allPrices = pairs.map(p => parseFloat(p.price.toFixed(4)));
-  allChanges = allPrices.map((p, i) =>
-    i === 0 ? 0 : parseFloat(((p - allPrices[i-1]) / allPrices[i-1] * 100).toFixed(4))
+  fullDates  = pairs.map(p => p.date);
+  fullLabels = pairs.map(p => p.date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }));
+  fullPrices = pairs.map(p => parseFloat(p.price.toFixed(4)));
+  fullChanges = fullPrices.map((p, i) =>
+    i === 0 ? 0 : parseFloat(((p - fullPrices[i-1]) / fullPrices[i-1] * 100).toFixed(4))
   );
 
-  const base = allPrices[0];
-  allCumRet = allPrices.map(p => parseFloat(((p - base) / base * 100).toFixed(4)));
+  // Default window: Feb 1 2025 → latest
+  const feb1 = new Date('2025-02-01');
+  winL = fullDates.findIndex(d => d >= feb1);
+  if (winL < 0) winL = 0;
+  winR = fullDates.length - 1;
 
-  updateStats();
-  renderChart('price');
-  renderBigMoves();
+  initSlider();
+  applyWindow();
 
   const now = new Date();
   setStatus(`${pairs.length} trading days loaded · as of ${now.toLocaleTimeString()}`, 'ok');
@@ -415,36 +505,163 @@ async function fetchNAV() {
     `generated ${now.toISOString().slice(0,19).replace('T',' ')} local`;
 }
 
-function updateStats() {
-  const cur   = allPrices[allPrices.length - 1];
-  const prev  = allPrices[allPrices.length - 2];
-  const first = allPrices[0];
-  const min   = Math.min(...allPrices);
-  const max   = Math.max(...allPrices);
-  const ret   = ((cur - first) / first * 100);
-  const dayChg = ((cur - prev) / prev * 100);
-  const avgMove = allChanges.slice(1).reduce((a,b) => a + Math.abs(b), 0) / (allChanges.length - 1);
-  const bigDays = allChanges.filter(c => Math.abs(c) >= 1).length;
+// ── Window slice ──────────────────────────────────────────────────────────
+function applyWindow() {
+  allDates   = fullDates.slice(winL, winR + 1);
+  allLabels  = fullLabels.slice(winL, winR + 1);
+  allPrices  = fullPrices.slice(winL, winR + 1);
 
-  const curEl = document.getElementById('s-cur');
-  curEl.textContent = `$${cur.toFixed(2)}`;
+  // Recompute daily changes within the window (first day = 0)
+  allChanges = allPrices.map((p, i) =>
+    i === 0 ? 0 : parseFloat(((p - allPrices[i-1]) / allPrices[i-1] * 100).toFixed(4))
+  );
+
+  const base = allPrices[0];
+  allCumRet  = allPrices.map(p => parseFloat(((p - base) / base * 100).toFixed(4)));
+
+  updateStats();
+  renderChart(currentView);
+  renderBigMoves();
+  updateRangeLabel();
+}
+
+// ── Slider ────────────────────────────────────────────────────────────────
+function initSlider() {
+  const n     = fullDates.length - 1; // max index
+  const track = document.getElementById('slider-track');
+  const fill  = document.getElementById('slider-fill');
+  const thumbL = document.getElementById('thumb-left');
+  const thumbR = document.getElementById('thumb-right');
+
+  // Build month tick marks
+  const tickRow = document.getElementById('slider-ticks');
+  tickRow.innerHTML = '';
+  let lastMonth = -1;
+  fullDates.forEach((d, i) => {
+    if (d.getMonth() !== lastMonth) {
+      lastMonth = d.getMonth();
+      const pct = (i / n * 100).toFixed(2);
+      const tick = document.createElement('span');
+      tick.style.position = 'absolute';
+      tick.style.left = pct + '%';
+      tick.style.transform = 'translateX(-50%)';
+      tick.textContent = d.toLocaleDateString('en-CA', { month: 'short' });
+      tickRow.appendChild(tick);
+    }
+  });
+  tickRow.style.position = 'relative';
+  tickRow.style.height = '16px';
+
+  function posFromIndex(idx) { return (idx / n * 100).toFixed(3) + '%'; }
+
+  function updateFill() {
+    const lPct = winL / n * 100;
+    const rPct = winR / n * 100;
+    fill.style.left  = lPct + '%';
+    fill.style.width = (rPct - lPct) + '%';
+    thumbL.style.left = lPct + '%';
+    thumbR.style.left = rPct + '%';
+  }
+
+  updateFill();
+
+  function indexFromEvent(e) {
+    const rect = track.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return Math.round(ratio * n);
+  }
+
+  function makeDraggable(thumb, isLeft) {
+    let dragging = false;
+
+    function onMove(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      const idx = indexFromEvent(e);
+      if (isLeft) {
+        winL = Math.min(idx, winR - 1);
+      } else {
+        winR = Math.max(idx, winL + 1);
+      }
+      updateFill();
+      applyWindow();
+    }
+
+    function onUp() {
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    }
+
+    thumb.addEventListener('mousedown', e => {
+      dragging = true;
+      e.preventDefault();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    thumb.addEventListener('touchstart', e => {
+      dragging = true;
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onUp);
+    });
+
+    // Keyboard arrow support
+    thumb.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const delta = e.key === 'ArrowRight' ? 1 : -1;
+        if (isLeft) winL = Math.max(0, Math.min(winL + delta, winR - 1));
+        else         winR = Math.max(winL + 1, Math.min(winR + delta, n));
+        updateFill();
+        applyWindow();
+      }
+    });
+  }
+
+  makeDraggable(thumbL, true);
+  makeDraggable(thumbR, false);
+}
+
+function updateRangeLabel() {
+  const fmt = d => d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('range-label').textContent =
+    `${fmt(allDates[0])} → ${fmt(allDates[allDates.length - 1])}  ·  ${allDates.length} days`;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+function updateStats() {
+  const cur      = allPrices[allPrices.length - 1];
+  const prev     = allPrices[allPrices.length - 2] ?? cur;
+  const first    = allPrices[0];
+  const min      = Math.min(...allPrices);
+  const max      = Math.max(...allPrices);
+  const ret      = (cur - first) / first * 100;
+  const dayChg   = (cur - prev) / prev * 100;
+  const avgMove  = allChanges.slice(1).reduce((a,b) => a + Math.abs(b), 0) / Math.max(allChanges.length - 1, 1);
+  const bigDays  = allChanges.filter(c => Math.abs(c) >= 1).length;
+
+  document.getElementById('s-cur').textContent = `$${cur.toFixed(2)}`;
   const dayColor = dayChg >= 0 ? 'var(--green)' : 'var(--red)';
   document.getElementById('s-cur-date').innerHTML =
     `<span style="color:${dayColor}">${dayChg >= 0 ? '+' : ''}${dayChg.toFixed(2)}% today</span>`;
 
-  document.getElementById('s-range').textContent = `$${min.toFixed(2)} – $${max.toFixed(2)}`;
+  document.getElementById('s-range').textContent    = `$${min.toFixed(2)} – $${max.toFixed(2)}`;
   document.getElementById('s-range-sub').textContent = `spread: $${(max - min).toFixed(2)}`;
 
   const retEl = document.getElementById('s-ret');
-  retEl.textContent = `${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%`;
-  retEl.className = 'stat-value ' + (ret >= 0 ? 'positive' : 'negative');
-  document.getElementById('s-ret-sub').textContent =
-    `$${first.toFixed(2)} → $${cur.toFixed(2)}`;
+  retEl.textContent  = `${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%`;
+  retEl.className    = 'stat-value ' + (ret >= 0 ? 'positive' : 'negative');
+  document.getElementById('s-ret-sub').textContent = `$${first.toFixed(2)} → $${cur.toFixed(2)}`;
 
-  document.getElementById('s-avg').textContent = `±${avgMove.toFixed(2)}%`;
+  document.getElementById('s-avg').textContent    = `±${avgMove.toFixed(2)}%`;
   document.getElementById('s-avg-sub').textContent = `${bigDays} days ≥ ±1%`;
 }
 
+// ── Big moves ─────────────────────────────────────────────────────────────
 function renderBigMoves() {
   const moves = allChanges
     .map((c, i) => ({ i, date: allLabels[i], fullDate: allDates[i], change: c, nav: allPrices[i] }))
@@ -452,11 +669,17 @@ function renderBigMoves() {
     .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
     .slice(0, 12);
 
-  const maxAbs = Math.max(...moves.map(m => Math.abs(m.change)));
+  if (!moves.length) {
+    document.getElementById('moves-list').innerHTML =
+      '<div style="font-family:var(--mono);font-size:12px;color:var(--muted);">No data in window.</div>';
+    return;
+  }
+
+  const maxAbs  = Math.max(...moves.map(m => Math.abs(m.change)));
   const weekday = d => d.toLocaleDateString('en-CA', { weekday: 'short' });
 
   document.getElementById('moves-list').innerHTML = moves.map(m => {
-    const pct = (Math.abs(m.change) / maxAbs * 100).toFixed(1);
+    const pct   = (Math.abs(m.change) / maxAbs * 100).toFixed(1);
     const color = m.change >= 0 ? 'var(--green)' : 'var(--red)';
     const sign  = m.change >= 0 ? '+' : '';
     return `
@@ -471,141 +694,77 @@ function renderBigMoves() {
   }).join('');
 }
 
+// ── Chart ─────────────────────────────────────────────────────────────────
 function setView(view) {
   currentView = view;
   document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
-  const labels = { price: 'NAV price (CAD)', change: 'daily % change', cumret: 'cumulative return from start' };
+  const labels = { price: 'NAV price (CAD)', change: 'daily % change', cumret: 'cumulative return from window start' };
   document.getElementById('chart-label').textContent = labels[view];
   renderChart(view);
 }
 
 function renderChart(view) {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
-  const ctx = document.getElementById('navChart').getContext('2d');
+  const ctx       = document.getElementById('navChart').getContext('2d');
+  const gridColor = 'rgba(255,255,255,0.05)';
+  const tickColor = '#4b5563';
+  const blue      = '#3b82f6';
+  const green     = '#10b981';
+  const red       = '#ef4444';
 
-  const gridColor  = 'rgba(255,255,255,0.05)';
-  const tickColor  = '#4b5563';
-  const accentBlue = '#3b82f6';
-  const green      = '#10b981';
-  const red        = '#ef4444';
+  const tooltipDefaults = {
+    backgroundColor: '#1a1e25',
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    titleColor: '#9ca3af',
+    bodyColor: '#e8eaed',
+    titleFont: { family: "'IBM Plex Mono'" },
+    bodyFont:  { family: "'IBM Plex Mono'", size: 13 },
+  };
+
+  const xScale = { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}};
 
   if (view === 'price') {
     chartInstance = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels: allLabels,
-        datasets: [{
-          label: 'NAV',
-          data: allPrices,
-          borderColor: accentBlue,
-          borderWidth: 1.5,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          pointHoverBackgroundColor: accentBlue,
-          fill: true,
-          backgroundColor: 'rgba(59,130,246,0.08)',
-          tension: 0.3
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1a1e25',
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1,
-            titleColor: '#9ca3af',
-            bodyColor: '#e8eaed',
-            titleFont: { family: "'IBM Plex Mono'" },
-            bodyFont: { family: "'IBM Plex Mono'", size: 13 },
-            callbacks: { label: c => ` $${c.parsed.y.toFixed(4)} CAD` }
-          }
-        },
-        scales: {
-          x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}},
-          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `$${v.toFixed(2)}` }}
-        }
-      }
+      data: { labels: allLabels, datasets: [{ label: 'NAV', data: allPrices,
+        borderColor: blue, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 5,
+        pointHoverBackgroundColor: blue, fill: true, backgroundColor: 'rgba(59,130,246,0.08)', tension: 0.3 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipDefaults,
+          callbacks: { label: c => ` $${c.parsed.y.toFixed(4)} CAD` }}},
+        scales: { x: xScale,
+          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `$${v.toFixed(2)}` }}}}
     });
 
   } else if (view === 'change') {
     chartInstance = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: allLabels,
-        datasets: [{
-          label: 'Daily %',
-          data: allChanges,
-          backgroundColor: allChanges.map(c => c >= 0 ? 'rgba(16,185,129,0.65)' : 'rgba(239,68,68,0.65)'),
-          borderColor:     allChanges.map(c => c >= 0 ? green : red),
-          borderWidth: 1,
-          borderRadius: 2
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1a1e25',
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1,
-            titleColor: '#9ca3af',
-            bodyColor: '#e8eaed',
-            titleFont: { family: "'IBM Plex Mono'" },
-            bodyFont: { family: "'IBM Plex Mono'", size: 13 },
-            callbacks: { label: c => ` ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(3)}%` }
-          }
-        },
-        scales: {
-          x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}},
-          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` }}
-        }
-      }
+      data: { labels: allLabels, datasets: [{ label: 'Daily %', data: allChanges,
+        backgroundColor: allChanges.map(c => c >= 0 ? 'rgba(16,185,129,0.65)' : 'rgba(239,68,68,0.65)'),
+        borderColor:     allChanges.map(c => c >= 0 ? green : red),
+        borderWidth: 1, borderRadius: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipDefaults,
+          callbacks: { label: c => ` ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(3)}%` }}},
+        scales: { x: xScale,
+          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` }}}}
     });
 
   } else {
+    const lastCum = allCumRet[allCumRet.length - 1] ?? 0;
     chartInstance = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels: allLabels,
-        datasets: [{
-          label: 'Cum. return',
-          data: allCumRet,
-          borderColor: allCumRet[allCumRet.length - 1] >= 0 ? green : red,
-          borderWidth: 1.5,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          fill: true,
-          backgroundColor: allCumRet[allCumRet.length - 1] >= 0
-            ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-          tension: 0.3
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1a1e25',
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1,
-            titleColor: '#9ca3af',
-            bodyColor: '#e8eaed',
-            titleFont: { family: "'IBM Plex Mono'" },
-            bodyFont: { family: "'IBM Plex Mono'", size: 13 },
-            callbacks: { label: c => ` ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(3)}%` }
-          }
-        },
-        scales: {
-          x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8, maxRotation: 0, font: { family: "'IBM Plex Mono'", size: 10 }}},
+      data: { labels: allLabels, datasets: [{ label: 'Cum. return', data: allCumRet,
+        borderColor: lastCum >= 0 ? green : red, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 5,
+        fill: true, backgroundColor: lastCum >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', tension: 0.3 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tooltipDefaults,
+          callbacks: { label: c => ` ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(3)}%` }}},
+        scales: { x: xScale,
           y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: "'IBM Plex Mono'", size: 10 }, callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` },
-            afterDataLimits(axis) { axis.max += 0.5; axis.min -= 0.5; }
-          }
-        }
-      }
+            afterDataLimits(axis) { axis.max += 0.5; axis.min -= 0.5; }}}}
     });
   }
 }
