@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v3.0</title>
+<title>Purpose Global Resources — Daily Attribution v3.1.1</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -911,7 +911,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v3.0</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v3.1.1</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
@@ -1193,16 +1193,41 @@ const SECTOR_INDICATORS = {
   },
 };
 
+const PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+async function proxyFetch(targetUrl, type = 'json') {
+  let lastErr;
+  for (const fn of PROXIES) {
+    const proxyUrl = fn(targetUrl);
+    if (typeof dbg === 'function') dbg('PROXY trying: ' + proxyUrl.slice(0, 140));
+    try {
+      const r = await fetch(proxyUrl);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const text = await r.text();
+      if (!text) throw new Error('empty response');
+      if (text.startsWith('Edge:')) throw new Error('rate-limited: ' + text.slice(0, 60));
+      if (type === 'json' && text[0] !== '{' && text[0] !== '[') throw new Error('not JSON: ' + text.slice(0, 60));
+      if (typeof dbg === 'function') dbg('PROXY ok via ' + proxyUrl.split('/')[2] + ' (' + text.length + ' chars)');
+      return text;
+    } catch(e) {
+      if (typeof dbg === 'function') dbg('PROXY fail ' + proxyUrl.split('/')[2] + ': ' + e.message);
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+}
+
 const commodityCache = {};
 
 async function fetchCommodity(ticker) {
   if (commodityCache[ticker]) return commodityCache[ticker];
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
   try {
-    const r = await fetch(proxyUrl);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
+    const j = JSON.parse(await proxyFetch(yahooUrl));
     const meta = j?.chart?.result?.[0]?.meta;
     if (!meta) throw new Error('no meta');
     const prev  = meta.chartPreviousClose || meta.previousClose;
@@ -1277,13 +1302,14 @@ const priceData    = {};
 
 // ── Position tracking ────────────────────────────────────────────────────────
 let sharesHeld = parseFloat(localStorage.getItem('sharesHeld')) || 0;
-let navPrice   = null;
+let navPrice = null;
 
 function onSharesInput(val) {
   sharesHeld = parseFloat(val) || 0;
   localStorage.setItem('sharesHeld', sharesHeld);
   render();
 }
+
 
 function formatAge(fetchedAt) {
   if (!fetchedAt) return '—';
@@ -1819,11 +1845,8 @@ function renderPieChart(sectors, mode) {
 // ── Price fetch ──────────────────────────────────────────────────────────────
 async function fetchQuote(ticker) {
 const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
-const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
 try {
-const r = await fetch(proxyUrl);
-if (!r.ok) throw new Error('HTTP ' + r.status);
-const j = await r.json();
+const j = JSON.parse(await proxyFetch(yahooUrl));
 const meta = j?.chart?.result?.[0]?.meta;
 if (!meta) {
   const errMsg = j?.chart?.error?.description || JSON.stringify(j).slice(0, 120);
@@ -1853,7 +1876,10 @@ txt.textContent = 'Fetching…';
 
 const live = holdings.filter(h => !h.manual && h.ticker);
 const results = await Promise.allSettled(
-live.map(h => fetchQuote(h.ticker).then(d => ({ ticker: h.ticker, ...d })))
+live.map((h, idx) =>
+  new Promise(res => setTimeout(res, idx * 300))
+    .then(() => fetchQuote(h.ticker).then(d => ({ ticker: h.ticker, ...d })))
+)
 );
 
 let errors = 0;
@@ -1872,10 +1898,15 @@ const now = new Date();
 document.getElementById('lastUpdated').textContent =
 `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
 
-btn.disabled = false;
-btn.textContent = '↻ Refresh Prices';
+// 30-second cooldown prevents rapid re-fetches that trigger proxy rate limits
+let remaining = 30;
+btn.textContent = `↻ Refresh (${remaining}s)`;
+const cd = setInterval(() => {
+  remaining--;
+  if (remaining <= 0) { clearInterval(cd); btn.disabled = false; btn.textContent = '↻ Refresh Prices'; }
+  else btn.textContent = `↻ Refresh (${remaining}s)`;
+}, 1000);
 render();
-fetchFundNAV();
 }
 
 // ── Manual ───────────────────────────────────────────────────────────────────
@@ -1904,34 +1935,33 @@ render();
 
 // ── Fund NAV ─────────────────────────────────────────────────────────────────
 async function fetchFundNAV() {
-const gmUrl = 'https://www.theglobeandmail.com/investing/markets/funds/PFC5101.CF/';
-const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(gmUrl)}`;
-try {
-const r = await fetch(proxyUrl);
-if (!r.ok) throw new Error('HTTP ' + r.status);
-const html = await r.text();
-const match = html.match(/quote='(\{[^']+\})'/);
-if (!match) throw new Error('quote attribute not found');
-const quote = JSON.parse(match[1]);
-const nav = parseFloat(quote.lastPrice);
-const pct = parseFloat(String(quote.percentChange).replace('%', ''));
-if (isNaN(nav) || isNaN(pct)) throw new Error('invalid data');
-navPrice = nav;
-render(); // refresh CAD columns now that NAV is known
-const navEl = document.getElementById('fundNAV');
-const moveEl = document.getElementById('reportedMove');
-const dateEl = document.getElementById('navDate');
-if (navEl) navEl.textContent = '$' + nav.toFixed(4);
-if (dateEl) dateEl.textContent = 'as of ' + (quote.tradeTime || '');
-if (moveEl) {
-  const sign = pct >= 0 ? '+' : '';
-  moveEl.textContent = sign + pct.toFixed(2) + '%';
-  moveEl.className = 'summary-value ' + (pct > 0.001 ? 'positive' : pct < -0.001 ? 'negative' : 'neutral');
-}
-if (typeof dbg === 'function') dbg('Fund NAV: $' + nav.toFixed(4) + ' (' + quote.percentChange + ') as of ' + quote.tradeTime);
-} catch(e) {
-if (typeof dbg === 'function') dbg('FAIL fund NAV: ' + e.message);
-}
+  try {
+    const r = await fetch('https://www.theglobeandmail.com/investing/markets/funds/PFC5101.CF/');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const html  = await r.text();
+    if (typeof dbg === 'function') dbg('G&M direct: ' + html.length + ' chars');
+    const match = html.match(/quote='(\{[^']+\})'/);
+    if (!match) throw new Error('quote attribute not found');
+    const quote = JSON.parse(match[1]);
+    const nav = parseFloat(quote.lastPrice);
+    const pct = parseFloat(String(quote.percentChange).replace('%', ''));
+    if (isNaN(nav) || isNaN(pct)) throw new Error('invalid data');
+    navPrice = nav;
+    render();
+    const navEl  = document.getElementById('fundNAV');
+    const moveEl = document.getElementById('reportedMove');
+    const dateEl = document.getElementById('navDate');
+    if (navEl)  navEl.textContent = '$' + nav.toFixed(4);
+    if (dateEl) dateEl.textContent = 'as of ' + (quote.tradeTime || '');
+    if (moveEl) {
+      const sign = pct >= 0 ? '+' : '';
+      moveEl.textContent = sign + pct.toFixed(2) + '%';
+      moveEl.className = 'summary-value ' + (pct > 0.001 ? 'positive' : pct < -0.001 ? 'negative' : 'neutral');
+    }
+    if (typeof dbg === 'function') dbg('Fund NAV: $' + nav.toFixed(4) + ' (' + quote.percentChange + ') as of ' + quote.tradeTime);
+  } catch(e) {
+    if (typeof dbg === 'function') dbg('FAIL fund NAV: ' + e.message);
+  }
 }
 
 // ── Modal ────────────────────────────────────────────────────────────────────
@@ -1987,6 +2017,7 @@ if (e.ctrlKey && e.key === '`') {
 document.addEventListener('DOMContentLoaded', function() {
 if (sharesHeld) document.getElementById('sharesInput').value = sharesHeld;
 render();
+fetchFundNAV();
 fetchAll();
 setInterval(render, 60000);
 });
