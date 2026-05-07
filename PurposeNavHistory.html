@@ -335,18 +335,44 @@
 </style>
 </head>
 <body>
+<script>
+(function() {
+  var log = [];
+  var expanded = false;
+  function dbg(msg) {
+    log.push(msg);
+    var body = document.getElementById('debugBody');
+    if (body) body.textContent = log.join('\n');
+    console.log('[DBG]', msg);
+  }
+  window.dbg = dbg;
+  window.toggleDebug = function() {
+    expanded = !expanded;
+    var body = document.getElementById('debugBody');
+    var toggle = document.getElementById('debugToggle');
+    if (body) body.style.display = expanded ? 'block' : 'none';
+    if (toggle) toggle.textContent = expanded ? '▲ collapse' : '▼ expand';
+  };
+  window.onerror = function(msg, src, line) {
+    dbg('UNCAUGHT ERROR: ' + msg + ' (line ' + line + ')');
+  };
+})();
+</script>
 <div class="container">
 
   <header>
     <div class="header-left">
-      <div class="ticker-tag">0P000077OC.TO · TSX · CAD</div>
+      <div class="ticker-tag">0P000077OC.TO · TSX · CAD · v1.0.0</div>
       <h1>Purpose Global Resource Fund <span>Series F</span></h1>
       <div class="status-bar">
         <div class="status-dot loading" id="dot"></div>
         <span id="status-text">Connecting to Yahoo Finance...</span>
       </div>
     </div>
-    <div class="last-updated" id="last-updated"></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <a href="PurposeInvestmentBreakdown.html" class="btn" style="text-decoration:none;">← Attribution</a>
+      <div class="last-updated" id="last-updated"></div>
+    </div>
   </header>
 
   <div class="stats-grid">
@@ -449,21 +475,30 @@ async function fetchNAV() {
   const start = end - (180 * 86400); // fetch 6 months so slider has room
   const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${TICKER}?interval=1d&period1=${start}&period2=${end}`;
 
+  const WORKER_URL = 'https://silent-water-d4f0.corey-cousins.workers.dev';
   const proxies = [
-    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `${WORKER_URL}?url=${encodeURIComponent(u)}`,
     u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u => u,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
   ];
 
   let json = null;
   for (const proxy of proxies) {
+    const proxyUrl = proxy(url);
+    const proxyHost = proxyUrl.split('?')[0].replace('https://','').split('/')[0];
     try {
-      setStatus(`Trying ${proxy(url).split('?')[0].replace('https://','').split('/')[0]}...`, 'loading');
-      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) continue;
-      const parsed = JSON.parse(await res.text());
-      if (parsed?.chart?.result) { json = parsed; break; }
-    } catch(e) { continue; }
+      setStatus(`Trying ${proxyHost}...`, 'loading');
+      dbg('PROXY trying: ' + proxyUrl.slice(0, 140));
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) { dbg('PROXY fail ' + proxyHost + ': HTTP ' + res.status); continue; }
+      const text = await res.text();
+      if (!text) { dbg('PROXY fail ' + proxyHost + ': empty response'); continue; }
+      if (text.startsWith('Edge:')) { dbg('PROXY fail ' + proxyHost + ': rate-limited'); continue; }
+      const parsed = JSON.parse(text);
+      if (parsed?.chart?.result) { dbg('PROXY ok via ' + proxyHost + ' (' + text.length + ' chars)'); json = parsed; break; }
+      dbg('PROXY fail ' + proxyHost + ': no chart result');
+    } catch(e) { dbg('PROXY fail ' + proxyHost + ': ' + e.message); continue; }
   }
 
   if (!json) {
@@ -770,6 +805,22 @@ function renderChart(view) {
 }
 
 fetchNAV();
+
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === '`') {
+    var panel = document.getElementById('debugPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  }
+});
 </script>
+
+<!-- DEBUG PANEL — toggle with Ctrl+` -->
+<div id="debugPanel" style="display:none;background:#1a1a1a;border:2px solid #888;color:#aaa;font-family:monospace;font-size:12px;margin:16px;z-index:9999;position:relative;">
+  <div id="debugHeader" onclick="window.toggleDebug()" style="padding:6px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+    <span>DEBUG — expand to see debug info</span>
+    <span id="debugToggle" style="font-size:10px;opacity:0.6;">▼ expand</span>
+  </div>
+  <div id="debugBody" style="display:none;padding:0 16px 16px;line-height:1.8;white-space:pre-wrap;border-top:1px solid rgba(136,136,136,0.3);max-height:300px;overflow-y:auto;"></div>
+</div>
 </body>
 </html>
