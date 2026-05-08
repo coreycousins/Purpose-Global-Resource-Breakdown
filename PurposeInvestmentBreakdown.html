@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Purpose Global Resources — Daily Attribution v3.1.7</title>
+<title>Purpose Global Resources — Daily Attribution v3.2.0</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,600;1,9..144,200&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -291,7 +291,7 @@ background: var(--border);
 
 .table-header-row {
 display: grid;
-grid-template-columns: 100px 1fr 110px 76px 88px 64px 100px 90px 24px;
+grid-template-columns: 100px 1fr 110px 76px 88px 64px 100px 90px 72px 24px;
 padding: 7px 14px;
 font-size: 9.5px;
 letter-spacing: 0.12em;
@@ -313,7 +313,7 @@ user-select: none;
 
 .holding-row {
 display: grid;
-grid-template-columns: 100px 1fr 110px 76px 88px 64px 100px 90px 24px;
+grid-template-columns: 100px 1fr 110px 76px 88px 64px 100px 90px 72px 24px;
 padding: 10px 14px;
 border-bottom: 1px solid var(--border);
 align-items: center;
@@ -555,7 +555,7 @@ user-select: none;
 .sector-header-row,
 .sector-row {
 display: grid;
-grid-template-columns: 1fr 76px 88px 100px 90px 24px;
+grid-template-columns: 1fr 76px 88px 100px 90px 72px 24px;
 padding: 7px 14px;
 align-items: center;
 }
@@ -806,6 +806,92 @@ padding-top: 18px;
 letter-spacing: 0.02em;
 }
 
+/* ── Sparklines ── */
+.sparkline-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 2px;
+}
+
+/* ── History panel ── */
+.history-range-bar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.history-range-btn {
+  background: none;
+  border: 1px solid var(--border-light);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.history-range-btn.active {
+  background: rgba(77,175,207,0.1);
+  color: var(--accent);
+  border-color: rgba(77,175,207,0.3);
+}
+.history-range-btn:hover:not(.active) {
+  color: var(--text);
+  background: rgba(255,255,255,0.03);
+}
+.history-chart-wrap {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+#historyCanvas { display: block; }
+.history-loading {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: center;
+  padding: 56px 0;
+  letter-spacing: 0.07em;
+  animation: blink 1.4s ease infinite;
+}
+.history-tooltip {
+  position: absolute;
+  top: 10px;
+  pointer-events: none;
+  font-size: 9px;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  line-height: 1.9;
+  background: rgba(9,12,14,0.94);
+  border: 1px solid var(--border-light);
+  padding: 7px 10px;
+  min-width: 148px;
+  display: none;
+  z-index: 2;
+}
+.history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  padding: 6px 2px 2px;
+}
+.history-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--label);
+  letter-spacing: 0.03em;
+}
+.history-legend-line {
+  width: 18px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) and (orientation: landscape) {
 .top-row { flex-wrap: wrap; overflow: visible; }
@@ -830,7 +916,7 @@ letter-spacing: 0.02em;
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
-/* Holdings table: hide Sector, Weight, Age, CAD move and arrow columns */
+/* Holdings table: hide Sector, Weight, Age, CAD move, Trend and arrow columns */
 .table-header-row,
 .holding-row { grid-template-columns: 70px 1fr 58px 70px; font-size: 11px; }
 .table-header-row span:nth-child(3),
@@ -838,11 +924,13 @@ letter-spacing: 0.02em;
 .table-header-row span:nth-child(6),
 .table-header-row span:nth-child(8),
 .table-header-row span:nth-child(9),
+.table-header-row span:nth-child(10),
 .holding-row > span:nth-child(3),
 .holding-row > span:nth-child(4),
 .holding-row > span:nth-child(6),
 .holding-row > span:nth-child(8),
-.holding-row > span:nth-child(9) { display: none; }
+.holding-row > span:nth-child(9),
+.holding-row > span:nth-child(10) { display: none; }
 .manual-input { width: 54px; font-size: 10px; padding: 3px 5px; }
 
 /* Sector table: hide Weight, CAD move and arrow columns */
@@ -851,9 +939,11 @@ letter-spacing: 0.02em;
 .sector-header-row span:nth-child(2),
 .sector-header-row span:nth-child(5),
 .sector-header-row span:nth-child(6),
+.sector-header-row span:nth-child(7),
 .sector-row > span:nth-child(2),
 .sector-row > span:nth-child(5),
-.sector-row > span:nth-child(6) { display: none; }
+.sector-row > span:nth-child(6),
+.sector-row > span:nth-child(7) { display: none; }
 
 /* Debug panel */
 #debugPanel { margin: 8px; }
@@ -911,7 +1001,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="header-left">
       <div class="fund-label">Portfolio Attribution</div>
       <div class="fund-title">Purpose Global Resources<br>Series F</div>
-      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v3.1.7</div>
+      <div class="fund-subtitle">Inside holdings · Daily movement breakdown · v3.2.0</div>
     </div>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
@@ -995,6 +1085,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <span class="col-right" data-col="daypct" onclick="setSectorSort('daypct')">Day %<span class="sort-arrow"></span></span>
       <span class="col-right sort-active" data-col="contrib" onclick="setSectorSort('contrib')">Contribution<span class="sort-arrow"> ▼</span></span>
       <span class="col-right">CAD Move</span>
+      <span class="col-right trend-header-lbl" style="font-size:8px;letter-spacing:0.08em;color:var(--muted);cursor:pointer;user-select:none" onclick="cycleHistoryRange()" title="Click to change range">Trend (1wk)</span>
       <span></span>
     </div>
     <div id="sectorTable"></div>
@@ -1037,9 +1128,33 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <span class="col-right" data-col="age" onclick="setSort('age')">Age<span class="sort-arrow"></span></span>
       <span class="col-right" data-col="contrib" onclick="setSort('contrib')">Contribution<span class="sort-arrow"></span></span>
       <span class="col-right">CAD Move</span>
+      <span class="col-right trend-header-lbl" style="font-size:8px;letter-spacing:0.08em;color:var(--muted);cursor:pointer;user-select:none" onclick="cycleHistoryRange()" title="Click to change range">Trend (1wk)</span>
       <span></span>
     </div>
     <div id="holdingsTable"></div>
+  </div>
+
+  <!-- History -->
+
+  <div class="section-label sector-toggle-label" style="margin-top:36px" onclick="toggleHistory()">
+    History
+    <span id="historyToggle" style="font-size:8px;opacity:0.55;margin-left:2px">▼ expand</span>
+  </div>
+  <div id="historyPanel" style="display:none;margin-bottom:28px;">
+    <div class="history-range-bar">
+      <button class="history-range-btn active" onclick="setHistoryRange('5d',this)">1W</button>
+      <button class="history-range-btn" onclick="setHistoryRange('1mo',this)">1M</button>
+      <button class="history-range-btn" onclick="setHistoryRange('3mo',this)">3M</button>
+      <button class="history-range-btn" onclick="setHistoryRange('6mo',this)">6M</button>
+      <button class="history-range-btn" onclick="setHistoryRange('1y',this)">1Y</button>
+    </div>
+    <div class="history-chart-wrap">
+      <div id="historyLoading" class="history-loading" style="display:none">loading history···</div>
+      <canvas id="historyCanvas" style="display:none"></canvas>
+      <div id="historyTooltip" class="history-tooltip"></div>
+    </div>
+    <div id="historyLegend" class="history-legend"></div>
+    <div id="historyNavNote" style="display:none;font-size:9px;color:var(--muted);margin-top:4px;letter-spacing:0.04em">Fund NAV data unavailable</div>
   </div>
 
   <div class="footer-note">
@@ -1529,6 +1644,7 @@ sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml, quoteTime }) => {
     <span class="age-cell">${formatAge(quoteTime)}</span>
     <span style="text-align:right">${contribHtml}</span>
     <span style="text-align:right">${cadHtml}</span>
+    <span class="sparkline-cell">${!h.manual && h.ticker ? `<canvas class="sparkline-canvas" data-ticker="${h.ticker}" width="70" height="22"></canvas>` : ''}</span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
   `;
   row.style.cursor = 'pointer';
@@ -1538,6 +1654,13 @@ sorted.forEach(({ h, i, dayPct, contrib, dayHtml, contribHtml, quoteTime }) => {
   });
   row.style.setProperty('--bar-w', Math.min(Math.abs(contrib) / barScale * 100, 100) + '%');
   tbody.appendChild(row);
+  if (!h.manual && h.ticker) {
+    const key = h.ticker + ':' + historyRange;
+    const sparkCanvas = row.querySelector('.sparkline-canvas');
+    if (sparkCanvas && historyCache[key] && historyCache[key].length >= 2) {
+      drawSparkline(sparkCanvas, historyCache[key], SPARKLINE_COLORS[h.sector.cls] || 'rgba(100,130,150,0.8)');
+    }
+  }
 });
 
 // Summary
@@ -1629,10 +1752,18 @@ sectors.forEach(s => {
     <span class="day-change col-right ${hasCoverage ? avgCls : 'loading'}">${hasCoverage ? avgSign + avgDayPct.toFixed(2) + '%' : '···'}</span>
     <span class="contribution col-right ${hasCoverage ? contribCls : 'zero'}">${hasCoverage ? contribSign + s.totalContrib.toFixed(3) + '%' : '—'}</span>
     <span class="contribution col-right ${sectorCAD !== null ? sectorCADCls : 'zero'}" style="font-size:11px">${sectorCAD !== null ? formatCAD(sectorCAD) : '—'}</span>
+    <span class="sparkline-cell"><canvas class="sector-sparkline-canvas" data-sector="${s.label}" width="70" height="22"></canvas></span>
     <span class="bar-arrow" style="color:${arrowColor}">${arrow}</span>
   `;
   row.addEventListener('click', function() { openSectorModal(s); });
   tbody.appendChild(row);
+  const sectorCanvas = row.querySelector('.sector-sparkline-canvas');
+  if (sectorCanvas) {
+    const sd = window._sectorSparklineData && window._sectorSparklineData[s.label];
+    if (sd && sd.pcts.filter(p => p != null).length >= 2) {
+      drawSparklinePcts(sectorCanvas, sd.pcts, SPARKLINE_COLORS[s.cls] || 'rgba(100,130,150,0.8)');
+    }
+  }
 });
 
 pieSectors = sectors;
@@ -1850,6 +1981,530 @@ function renderPieChart(sectors, mode) {
   });
 }
 
+// ── History ──────────────────────────────────────────────────────────────────
+
+const SPARKLINE_COLORS = {
+  energy:   'rgba(77,175,207,0.9)',
+  metals:   'rgba(180,140,255,0.9)',
+  lithium:  'rgba(52,201,122,0.9)',
+  cash:     'rgba(106,136,152,0.5)',
+  unlisted: 'rgba(62,80,96,0.45)',
+};
+const NAV_LINE_COLOR = '#eda030';
+
+const historyCache  = {};
+const hiddenSeries  = new Set();
+let historyRange      = '5d';
+let historySeriesData = null;
+let historyDates      = null;
+let historyDateLabels = [];
+let historyExpanded   = false;
+let historyLoading    = false;
+let historyChartState = null;
+
+async function fetchHistory(ticker, range) {
+  const key = ticker + ':' + range;
+  if (historyCache[key] !== undefined) return historyCache[key];
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=${range}`;
+  try {
+    const j = JSON.parse(await proxyFetch(yahooUrl));
+    const result = j?.chart?.result?.[0];
+    if (!result) throw new Error('no result');
+    const timestamps = result.timestamp || [];
+    const closes     = result.indicators?.quote?.[0]?.close || [];
+    const pairs = [];
+    timestamps.forEach((t, i) => { if (closes[i] != null) pairs.push({ t: t * 1000, c: closes[i] }); });
+    historyCache[key] = pairs;
+    return pairs;
+  } catch(e) {
+    historyCache[key] = [];
+    return [];
+  }
+}
+
+function drawSparkline(canvas, pairs, color) {
+  if (!canvas || pairs.length < 2) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = 70, H = 22;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const base  = pairs[0].c;
+  const pcts  = pairs.map(p => ((p.c - base) / base) * 100);
+  const minV  = Math.min(...pcts, 0);
+  const maxV  = Math.max(...pcts, 0);
+  const spread = maxV - minV || 1;
+  const pad   = 2;
+  const toX   = i => pad + (i / Math.max(pcts.length - 1, 1)) * (W - pad * 2);
+  const toY   = v => H - pad - ((v - minV) / spread) * (H - pad * 2);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath(); ctx.moveTo(0, toY(0)); ctx.lineTo(W, toY(0)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  pcts.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.lineCap     = 'round';
+  ctx.stroke();
+
+  const lastPct = pcts[pcts.length - 1];
+  ctx.beginPath();
+  ctx.arc(toX(pcts.length - 1), toY(lastPct), 2, 0, Math.PI * 2);
+  ctx.fillStyle = lastPct > 0.05 ? 'rgba(52,201,122,0.9)' : lastPct < -0.05 ? 'rgba(232,79,79,0.9)' : color;
+  ctx.fill();
+}
+
+function updateAllSparklines() {
+  document.querySelectorAll('.sparkline-canvas[data-ticker]').forEach(canvas => {
+    const ticker = canvas.dataset.ticker;
+    const data   = historyCache[ticker + ':' + historyRange];
+    if (!data || data.length < 2) return;
+    const h     = holdings.find(hh => hh.ticker === ticker);
+    const color = h ? (SPARKLINE_COLORS[h.sector.cls] || 'rgba(100,130,150,0.8)') : 'rgba(100,130,150,0.8)';
+    drawSparkline(canvas, data, color);
+  });
+}
+
+function drawSparklinePcts(canvas, pcts, color) {
+  const valid = pcts.filter(p => p != null);
+  if (!canvas || valid.length < 2) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = 70, H = 22;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const minV   = Math.min(...valid, 0);
+  const maxV   = Math.max(...valid, 0);
+  const spread = maxV - minV || 1;
+  const pad    = 2;
+  const toX    = i => pad + (i / Math.max(pcts.length - 1, 1)) * (W - pad * 2);
+  const toY    = v => H - pad - ((v - minV) / spread) * (H - pad * 2);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth   = 0.5;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath(); ctx.moveTo(0, toY(0)); ctx.lineTo(W, toY(0)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  let started = false;
+  pcts.forEach((p, i) => {
+    if (p == null) { started = false; return; }
+    if (!started) { ctx.moveTo(toX(i), toY(p)); started = true; } else ctx.lineTo(toX(i), toY(p));
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.lineCap     = 'round';
+  ctx.stroke();
+
+  const lastIdx = pcts.reduce((li, p, i) => p != null ? i : li, -1);
+  if (lastIdx >= 0) {
+    const lastPct = pcts[lastIdx];
+    ctx.beginPath();
+    ctx.arc(toX(lastIdx), toY(lastPct), 2, 0, Math.PI * 2);
+    ctx.fillStyle = lastPct > 0.05 ? 'rgba(52,201,122,0.9)' : lastPct < -0.05 ? 'rgba(232,79,79,0.9)' : color;
+    ctx.fill();
+  }
+}
+
+function computeSectorSparklineData() {
+  if (!historySeriesData || !historyDates) return {};
+  const N = historyDates.length;
+  const result = {};
+
+  // Group holdings by sector (non-manual, tickered only)
+  const bySector = {};
+  holdings.forEach(h => {
+    if (!h.ticker || h.manual) return;
+    const key = h.sector.label;
+    if (!bySector[key]) bySector[key] = { cls: h.sector.cls, items: [] };
+    bySector[key].items.push(h);
+  });
+
+  Object.entries(bySector).forEach(([label, { cls, items }]) => {
+    const pcts = [];
+    for (let i = 0; i < N; i++) {
+      let wSum = 0, wTotal = 0;
+      items.forEach(h => {
+        const s = historySeriesData.find(ss => ss.ticker === h.ticker);
+        if (!s || s.pcts[i] == null) return;
+        wSum   += h.weight * s.pcts[i];
+        wTotal += h.weight;
+      });
+      pcts.push(wTotal > 0 ? wSum / wTotal : null);
+    }
+    result[label] = { cls, pcts };
+  });
+
+  return result;
+}
+
+function updateSectorSparklines() {
+  const data = computeSectorSparklineData();
+  window._sectorSparklineData = data;
+  document.querySelectorAll('.sector-sparkline-canvas[data-sector]').forEach(canvas => {
+    const sd = data[canvas.dataset.sector];
+    if (!sd) return;
+    drawSparklinePcts(canvas, sd.pcts, SPARKLINE_COLORS[sd.cls] || 'rgba(100,130,150,0.8)');
+  });
+}
+
+async function loadHistory() {
+  if (historyLoading) return;
+  historyLoading = true;
+
+  const loadEl   = document.getElementById('historyLoading');
+  const canvas   = document.getElementById('historyCanvas');
+  const legendEl = document.getElementById('historyLegend');
+  if (loadEl)   loadEl.style.display = 'block';
+  if (canvas)   canvas.style.display = 'none';
+  if (legendEl) legendEl.innerHTML   = '';
+
+  const range = historyRange;
+  const live  = holdings.filter(h => !h.manual && h.ticker);
+
+  const results = await Promise.all([
+    ...live.map(h => fetchHistory(h.ticker, range)),
+    fetchHistory('0P000077OC.TO', range),
+  ]);
+
+  const navData = results[results.length - 1];
+  const tickerData = {};
+  live.forEach((h, i) => { tickerData[h.ticker] = results[i]; });
+
+  const dateCount = {};
+  const addDates  = pairs => pairs.forEach(p => {
+    const ds = new Date(p.t).toISOString().slice(0, 10);
+    dateCount[ds] = (dateCount[ds] || 0) + 1;
+  });
+  live.forEach(h => addDates(tickerData[h.ticker] || []));
+  addDates(navData);
+
+  const threshold   = Math.max(2, (live.length + 1) * 0.35);
+  const masterDates = Object.keys(dateCount).filter(d => dateCount[d] >= threshold).sort();
+
+  if (masterDates.length < 2) {
+    if (loadEl) loadEl.style.display = 'none';
+    historyLoading = false;
+    return;
+  }
+
+  function buildCloseMap(pairs) {
+    const m = {};
+    pairs.forEach(p => { m[new Date(p.t).toISOString().slice(0, 10)] = p.c; });
+    return m;
+  }
+
+  function extractSeries(closeMap, dates) {
+    const out = []; let last = null;
+    dates.forEach(d => { if (closeMap[d] != null) last = closeMap[d]; out.push(last); });
+    return out;
+  }
+
+  const series = [];
+  live.forEach(h => {
+    const cm     = buildCloseMap(tickerData[h.ticker] || []);
+    const closes = extractSeries(cm, masterDates);
+    const base   = closes.find(c => c != null);
+    if (!base) return;
+    series.push({
+      label: h.display, ticker: h.ticker, cls: h.sector.cls,
+      color: SPARKLINE_COLORS[h.sector.cls] || 'rgba(100,130,150,0.7)',
+      lineWidth: 1,
+      pcts: closes.map(c => c != null ? ((c - base) / base) * 100 : null),
+    });
+  });
+
+  const navCm     = buildCloseMap(navData);
+  const navCloses = extractSeries(navCm, masterDates);
+  const navBase   = navCloses.find(c => c != null);
+  if (navBase) {
+    series.push({
+      label: 'PGRF NAV', ticker: '0P000077OC.TO', cls: 'nav',
+      color: NAV_LINE_COLOR, lineWidth: 2.5, isNav: true,
+      pcts: navCloses.map(c => c != null ? ((c - navBase) / navBase) * 100 : null),
+    });
+  }
+
+  historySeriesData = series;
+  historyDates      = masterDates;
+  historyDateLabels = masterDates.map(d => {
+    const dt = new Date(d + 'T12:00:00Z');
+    return dt.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+  });
+
+  if (loadEl) loadEl.style.display = 'none';
+  if (canvas) canvas.style.display = 'block';
+  drawHistoryChart();
+  renderHistoryLegend();
+  updateAllSparklines();
+  updateSectorSparklines();
+  historyLoading = false;
+}
+
+function historyLabelCount(N) {
+  if (N <= 7)  return N;
+  if (N <= 25) return 5;
+  if (N <= 65) return 6;
+  return 7;
+}
+
+function drawHistoryChart(hoverIdx = -1) {
+  const canvas = document.getElementById('historyCanvas');
+  if (!canvas || !historySeriesData || historySeriesData.length === 0) return;
+
+  const series = historySeriesData;
+  const N      = historyDates ? historyDates.length : 0;
+  if (N < 2) return;
+
+  const dpr  = window.devicePixelRatio || 1;
+  const wrap = canvas.parentElement;
+  const W    = Math.max(wrap.clientWidth, 200);
+  const H    = 240;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const PAD = { l: 46, r: 12, t: 12, b: 26 };
+  const cW  = W - PAD.l - PAD.r;
+  const cH  = H - PAD.t - PAD.b;
+
+  let minP = 0, maxP = 0;
+  series.forEach(s => s.pcts.forEach(p => {
+    if (p != null) { minP = Math.min(minP, p); maxP = Math.max(maxP, p); }
+  }));
+  const yPad = Math.max((maxP - minP) * 0.1, 0.5);
+  const yMin = minP - yPad, yMax = maxP + yPad;
+  const yRng = yMax - yMin;
+
+  const toX = i => PAD.l + (i / (N - 1)) * cW;
+  const toY = v => PAD.t + cH - ((v - yMin) / yRng) * cH;
+
+  // Grid
+  const gridN = 4;
+  for (let i = 0; i <= gridN; i++) {
+    const v = yMin + (yRng / gridN) * i;
+    const y = toY(v);
+    ctx.strokeStyle = 'rgba(26,32,40,1)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
+    ctx.fillStyle      = '#3e5060';
+    ctx.font           = `8.5px 'DM Mono', monospace`;
+    ctx.textAlign      = 'right';
+    ctx.textBaseline   = 'middle';
+    ctx.fillText((v >= 0.005 ? '+' : '') + v.toFixed(1) + '%', PAD.l - 4, y);
+  }
+
+  // Zero line
+  if (yMin < 0 && yMax > 0) {
+    const zy = toY(0);
+    ctx.strokeStyle = 'rgba(255,255,255,0.11)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(PAD.l, zy); ctx.lineTo(W - PAD.r, zy); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // X-axis labels
+  const labelN = historyLabelCount(N);
+  ctx.fillStyle    = '#3e5060';
+  ctx.font         = `8px 'DM Mono', monospace`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = 0; i < labelN; i++) {
+    const idx = Math.round(i * (N - 1) / Math.max(labelN - 1, 1));
+    ctx.fillText(historyDateLabels[idx] || '', toX(idx), H - PAD.b + 5);
+  }
+
+  // Lines
+  const navS   = series.filter(s => s.isNav);
+  const stockS = series.filter(s => !s.isNav);
+
+  function drawLine(s) {
+    if (hiddenSeries.has(s.label)) return;
+    ctx.beginPath();
+    let started = false;
+    s.pcts.forEach((p, i) => {
+      if (p == null) { started = false; return; }
+      const x = toX(i), y = toY(p);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle  = s.color;
+    ctx.lineWidth    = s.lineWidth;
+    ctx.lineJoin     = 'round';
+    ctx.lineCap      = 'round';
+    ctx.globalAlpha  = s.isNav ? 1 : 0.65;
+    ctx.stroke();
+    ctx.globalAlpha  = 1;
+  }
+  stockS.forEach(drawLine);
+  navS.forEach(drawLine);
+
+  // Crosshair + dots
+  if (hoverIdx >= 0 && hoverIdx < N) {
+    const hx = toX(hoverIdx);
+    ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(hx, PAD.t); ctx.lineTo(hx, H - PAD.b); ctx.stroke();
+    series.forEach(s => {
+      if (hiddenSeries.has(s.label)) return;
+      const p = s.pcts[hoverIdx];
+      if (p == null) return;
+      const hy = toY(p);
+      ctx.beginPath();
+      ctx.arc(hx, hy, s.isNav ? 4 : 2.5, 0, Math.PI * 2);
+      ctx.fillStyle   = s.color;
+      ctx.globalAlpha = s.isNav ? 1 : 0.9;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#090c0e';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+    });
+  }
+
+  historyChartState = { series, N, toX, toY, W, H, PAD, cW };
+}
+
+function renderHistoryLegend() {
+  if (!historySeriesData) return;
+  const legendEl = document.getElementById('historyLegend');
+  const navNote  = document.getElementById('historyNavNote');
+  const navS     = historySeriesData.filter(s => s.isNav);
+  const stockS   = historySeriesData.filter(s => !s.isNav);
+  if (navNote) navNote.style.display = navS.length > 0 ? 'none' : '';
+  if (!legendEl) return;
+  legendEl.innerHTML = [...stockS, ...navS].map(s => {
+    const hidden = hiddenSeries.has(s.label);
+    const last   = [...s.pcts].reverse().find(p => p != null);
+    const sign   = last != null && last >= 0 ? '+' : '';
+    const valStr = !hidden && last != null
+      ? `<span style="color:${last >= 0 ? 'var(--green)' : 'var(--red)'};margin-left:3px">${sign}${last.toFixed(1)}%</span>`
+      : '';
+    const safeLabel = s.label.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return `<div class="history-legend-item" onclick="toggleHistorySeries('${safeLabel}')" style="cursor:pointer;opacity:${hidden ? '0.3' : '1'};transition:opacity 0.15s">
+      <span class="history-legend-line" style="background:${s.color};height:${s.isNav ? '3' : '2'}px"></span>
+      <span style="${hidden ? 'text-decoration:line-through;color:var(--muted)' : ''}">${s.label}</span>${valStr}
+    </div>`;
+  }).join('');
+}
+
+function toggleHistorySeries(label) {
+  if (hiddenSeries.has(label)) hiddenSeries.delete(label);
+  else hiddenSeries.add(label);
+  const canvas = document.getElementById('historyCanvas');
+  drawHistoryChart(canvas && canvas._hoverIdx != null ? canvas._hoverIdx : -1);
+  renderHistoryLegend();
+}
+
+function setupHistoryHover() {
+  const canvas  = document.getElementById('historyCanvas');
+  const tooltip = document.getElementById('historyTooltip');
+  if (!canvas || !tooltip) return;
+
+  canvas.onmousemove = function(e) {
+    if (!historyChartState) return;
+    const { N, W, PAD, cW, series, toX } = historyChartState;
+    const rect = canvas.getBoundingClientRect();
+    const mx   = (e.clientX - rect.left) / rect.width * W;
+    if (mx < PAD.l || mx > W - PAD.r) { tooltip.style.display = 'none'; return; }
+    const idx = Math.max(0, Math.min(N - 1, Math.round((mx - PAD.l) / cW * (N - 1))));
+    if (canvas._hoverIdx !== idx) {
+      canvas._hoverIdx = idx;
+      drawHistoryChart(idx);
+    }
+    const hx   = toX(idx);
+    const flip = hx > W / 2;
+    tooltip.style.left  = flip ? 'auto' : (hx + 8) + 'px';
+    tooltip.style.right = flip ? (W - hx + 8) + 'px' : 'auto';
+    tooltip.style.display = 'block';
+
+    const navS   = series.filter(s => s.isNav && !hiddenSeries.has(s.label));
+    const stockS = series.filter(s => !s.isNav && !hiddenSeries.has(s.label))
+      .filter(s => s.pcts[idx] != null)
+      .sort((a, b) => (b.pcts[idx] || 0) - (a.pcts[idx] || 0));
+
+    let html = `<div style="color:var(--muted);font-size:8px;margin-bottom:5px;letter-spacing:0.07em">${historyDateLabels[idx] || ''}</div>`;
+    [...navS, ...stockS.slice(0, 10)].forEach(s => {
+      const p = s.pcts[idx];
+      if (p == null) return;
+      const sign = p >= 0 ? '+' : '';
+      const col  = p >= 0 ? 'var(--green)' : 'var(--red)';
+      html += `<div style="display:flex;align-items:center;gap:7px">
+        <span style="width:12px;height:${s.isNav ? '3' : '2'}px;background:${s.color};display:inline-block;flex-shrink:0;border-radius:1px"></span>
+        <span style="flex:1;color:${s.isNav ? NAV_LINE_COLOR : 'var(--label)'}">${s.label}</span>
+        <span style="color:${col}">${sign}${p.toFixed(s.isNav ? 2 : 1)}%</span>
+      </div>`;
+    });
+    if (stockS.length > 10) html += `<div style="color:var(--muted);font-size:8px;margin-top:3px">+${stockS.length - 10} more</div>`;
+    tooltip.innerHTML = html;
+  };
+
+  canvas.onmouseleave = function() {
+    tooltip.style.display = 'none';
+    if (canvas._hoverIdx != null && canvas._hoverIdx >= 0) {
+      canvas._hoverIdx = -1;
+      drawHistoryChart();
+    }
+  };
+}
+
+const RANGE_LABELS = { '5d': '1wk', '1mo': '1mo', '3mo': '3mo', '6mo': '6mo', '1y': '1yr' };
+const RANGE_CYCLE  = ['5d', '1mo', '3mo', '6mo', '1y'];
+
+function cycleHistoryRange() {
+  const idx  = RANGE_CYCLE.indexOf(historyRange);
+  const next = RANGE_CYCLE[(idx + 1) % RANGE_CYCLE.length];
+  const btn  = document.querySelector(`.history-range-btn[onclick*="'${next}'"]`);
+  setHistoryRange(next, btn);
+}
+
+function setHistoryRange(range, btn) {
+  if (historyRange === range) return;
+  historyRange      = range;
+  historySeriesData = null;
+  historyDates      = null;
+  historyDateLabels = [];
+  hiddenSeries.clear();
+  document.querySelectorAll('.history-range-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.trend-header-lbl').forEach(el => { el.textContent = 'Trend (' + (RANGE_LABELS[range] || range) + ')'; });
+  if (historyExpanded) loadHistory();
+  updateAllSparklines();
+  updateSectorSparklines();
+}
+
+function toggleHistory() {
+  historyExpanded = !historyExpanded;
+  document.getElementById('historyPanel').style.display = historyExpanded ? 'block' : 'none';
+  document.getElementById('historyToggle').textContent  = historyExpanded ? '▲ collapse' : '▼ expand';
+  if (historyExpanded) {
+    if (!historySeriesData) loadHistory();
+    else { requestAnimationFrame(drawHistoryChart); renderHistoryLegend(); }
+  }
+}
+
 // ── Price fetch ──────────────────────────────────────────────────────────────
 async function fetchQuote(ticker) {
 const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
@@ -1944,10 +2599,8 @@ render();
 // ── Fund NAV ─────────────────────────────────────────────────────────────────
 async function fetchFundNAV() {
   try {
-    const r = await fetch('https://www.theglobeandmail.com/investing/markets/funds/PFC5101.CF/');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const html  = await r.text();
-    if (typeof dbg === 'function') dbg('G&M direct: ' + html.length + ' chars');
+    const html = await proxyFetch('https://www.theglobeandmail.com/investing/markets/funds/PFC5101.CF/', 'text');
+    if (typeof dbg === 'function') dbg('G&M via proxy: ' + html.length + ' chars');
     const match = html.match(/quote='(\{[^']+\})'/);
     if (!match) throw new Error('quote attribute not found');
     const quote = JSON.parse(match[1]);
@@ -2027,6 +2680,7 @@ if (sharesHeld) document.getElementById('sharesInput').value = sharesHeld;
 render();
 fetchFundNAV();
 fetchAll();
+setupHistoryHover();
 setInterval(render, 60000);
 });
 </script>
