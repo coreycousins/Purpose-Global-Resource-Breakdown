@@ -635,6 +635,50 @@ color: var(--text);
 }
 .position-value.positive { color: var(--green); }
 .position-value.negative { color: var(--red); }
+.indicator-value {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.indicator-chg {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
+.indicator-chg.pos { color: var(--green); }
+.indicator-chg.neg { color: var(--red); }
+.indicator-chg.zero { color: var(--muted); }
+.position-pnl-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.position-pnl-breakdown .pnl-term {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.position-pnl-breakdown .pnl-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.position-pnl-breakdown .pnl-operator {
+  color: var(--text);
+}
+.position-pnl-breakdown .pnl-amount {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+}
+.position-pnl-breakdown .pnl-amount.positive { color: var(--green); }
+.position-pnl-breakdown .pnl-amount.negative { color: var(--red); }
 
 /* ── Market Indicators (sector modal) ── */
 .modal-indicators {
@@ -1010,6 +1054,52 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     </div>
   </div>
 
+  <!-- Key Indicators -->
+
+  <div class="top-row">
+    <div class="top-row-item">
+      <div class="summary-label">WTI Crude Oil</div>
+      <div class="indicator-value" id="wtiPrice">—</div>
+      <div class="indicator-chg" id="wtiChg">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Brent Crude Oil</div>
+      <div class="indicator-value" id="brentPrice">—</div>
+      <div class="indicator-chg" id="brentChg">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Gold</div>
+      <div class="indicator-value" id="goldPrice">—</div>
+      <div class="indicator-chg" id="goldChg">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Silver</div>
+      <div class="indicator-value" id="silverPrice">—</div>
+      <div class="indicator-chg" id="silverChg">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Lithium</div>
+      <div class="indicator-value" id="lithiumPrice">—</div>
+      <div class="indicator-chg" id="lithiumChg">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Crack Spread</div>
+      <div class="indicator-value" id="crackPrice">—</div>
+      <div class="indicator-chg" id="crackChg">—</div>
+    </div>
+    <div class="top-row-divider"></div>
+    <div class="top-row-item">
+      <div class="summary-label">Nat. Gas</div>
+      <div class="indicator-value" id="gasPrice">—</div>
+      <div class="indicator-chg" id="gasChg">—</div>
+    </div>
+  </div>
+
   <!-- Row 1: Facts -->
 
   <div class="top-row">
@@ -1045,7 +1135,13 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Est. Position P&amp;L</div>
-      <div class="position-value" id="positionMove">—</div>
+      <div class="position-pnl-breakdown" id="positionBreakdown">
+        <span class="pnl-term"><span class="pnl-label">Gain</span> <span class="pnl-amount positive" id="positionGain">—</span></span>
+        <span class="pnl-operator">−</span>
+        <span class="pnl-term"><span class="pnl-label">Loss</span> <span class="pnl-amount negative" id="positionLoss">—</span></span>
+        <span class="pnl-operator">=</span>
+        <span class="pnl-term"><span class="pnl-label">P&amp;L</span> <span class="pnl-amount" id="positionNet">—</span></span>
+      </div>
     </div>
   </div>
 
@@ -1348,7 +1444,7 @@ const commodityCache = {};
 
 async function fetchCommodity(ticker) {
   if (commodityCache[ticker]) return commodityCache[ticker];
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
   try {
     const j = JSON.parse(await proxyFetch(yahooUrl));
     const meta = j?.chart?.result?.[0]?.meta;
@@ -1456,20 +1552,36 @@ function cadMove(contribPct) {
 
 function updatePositionBar(totalContrib) {
   const valueEl = document.getElementById('positionValue');
-  const moveEl  = document.getElementById('positionMove');
   if (!sharesHeld || !navPrice) {
     valueEl.textContent = '—';
     valueEl.className = 'position-value';
-    moveEl.textContent  = '—';
-    moveEl.className = 'position-value';
     return;
   }
   const totalValue = sharesHeld * navPrice;
   valueEl.textContent = '$' + totalValue.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   valueEl.className = 'position-value';
-  const move = sharesHeld * navPrice * (totalContrib / 100);
-  moveEl.textContent = formatCAD(move);
-  moveEl.className = 'position-value' + (move > 0 ? ' positive' : move < 0 ? ' negative' : '');
+}
+
+function updatePositionBreakdown(totalGain, totalLoss) {
+  const gainEl = document.getElementById('positionGain');
+  const lossEl = document.getElementById('positionLoss');
+  const netEl  = document.getElementById('positionNet');
+  let gainText = '$' + totalGain.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let lossText = '$' + totalLoss.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let netValue = totalGain - totalLoss;
+  let netText = formatCAD(netValue);
+  if (!sharesHeld || !navPrice) {
+    gainText = '—';
+    lossText = '—';
+    netText  = '—';
+    netValue = 0;
+  }
+  if (gainEl) gainEl.textContent = gainText;
+  if (lossEl) lossEl.textContent = lossText;
+  if (netEl) {
+    netEl.textContent = netText;
+    netEl.className = 'pnl-amount' + (netValue > 0 ? ' positive' : netValue < 0 ? ' negative' : '');
+  }
 }
 
 // ── Sector panel toggle ──────────────────────────────────────────────────────
@@ -1541,7 +1653,7 @@ function render() {
 const tbody = document.getElementById('holdingsTable');
 tbody.innerHTML = '';
 
-let totalContrib = 0, coveredWeight = 0;
+let totalContrib = 0, coveredWeight = 0, totalGainCAD = 0, totalLossCAD = 0;
 let topPos = { contrib: -Infinity, label: null };
 let topNeg = { contrib:  Infinity, label: null };
 
@@ -1584,6 +1696,12 @@ const computed = holdings.map((h, i) => {
     if (contrib < topNeg.contrib) topNeg = { contrib, label: h.display };
   } else {
     contribHtml = `<span class="contribution zero">—</span>`;
+  }
+
+  const holdingCAD = dayPct !== null ? cadMove(contrib) : null;
+  if (holdingCAD !== null) {
+    if (holdingCAD > 0) totalGainCAD += holdingCAD;
+    if (holdingCAD < 0) totalLossCAD += Math.abs(holdingCAD);
   }
 
   const quoteTime = h.manual ? null : (priceData[h.ticker]?.quoteTime || null);
@@ -1668,6 +1786,8 @@ const totalEl = document.getElementById('totalMove');
 const sign = totalContrib >= 0 ? '+' : '';
 totalEl.textContent = coveredWeight > 0 ? `${sign}${totalContrib.toFixed(3)}%` : '—';
 totalEl.className = 'summary-value ' + (totalContrib > 0.001 ? 'positive' : totalContrib < -0.001 ? 'negative' : 'neutral');
+
+updatePositionBreakdown(totalGainCAD, totalLossCAD);
 
 const covPct = Math.round(coveredWeight * 100);
 document.getElementById('coveredPct').textContent = covPct + '%';
@@ -2505,6 +2625,56 @@ function toggleHistory() {
   }
 }
 
+// ── Key Indicators ──────────────────────────────────────────────────────────
+async function fetchKeyIndicators() {
+  const indicators = [
+    { ticker: 'CL=F',  priceEl: 'wtiPrice',   chgEl: 'wtiChg',   fmt: p => `$${p.toFixed(2)}/bbl` },
+    { ticker: 'BZ=F',  priceEl: 'brentPrice', chgEl: 'brentChg', fmt: p => `$${p.toFixed(2)}/bbl` },
+    { ticker: 'GC=F',  priceEl: 'goldPrice',  chgEl: 'goldChg',  fmt: p => `$${p.toFixed(2)}/oz` },
+    { ticker: 'SI=F',  priceEl: 'silverPrice',chgEl: 'silverChg',fmt: p => `$${p.toFixed(2)}/oz` },
+    { ticker: 'LIT',   priceEl: 'lithiumPrice',chgEl: 'lithiumChg',fmt: p => `$${p.toFixed(2)}` },
+    { ticker: 'NG=F',  priceEl: 'gasPrice',   chgEl: 'gasChg',   fmt: p => `$${p.toFixed(3)}/MMBtu` },
+  ];
+
+  for (const ind of indicators) {
+    try {
+      const data = await fetchCommodity(ind.ticker);
+      if (data.error) {
+        document.getElementById(ind.priceEl).textContent = 'N/A';
+        document.getElementById(ind.chgEl).textContent = '—';
+        document.getElementById(ind.chgEl).className = 'indicator-chg zero';
+      } else {
+        document.getElementById(ind.priceEl).textContent = ind.fmt(data.price);
+        const sign = data.chg >= 0 ? '+' : '';
+        const cls = data.chg > 0.01 ? 'pos' : data.chg < -0.01 ? 'neg' : 'zero';
+        document.getElementById(ind.chgEl).textContent = `${sign}${data.chg.toFixed(2)}%`;
+        document.getElementById(ind.chgEl).className = `indicator-chg ${cls}`;
+      }
+    } catch (e) {
+      document.getElementById(ind.priceEl).textContent = '—';
+      document.getElementById(ind.chgEl).textContent = '—';
+      document.getElementById(ind.chgEl).className = 'indicator-chg zero';
+    }
+  }
+
+  try {
+    const [cl, rb, ho] = await Promise.all(['CL=F', 'RB=F', 'HO=F'].map(t => fetchCommodity(t)));
+    if (cl.error || rb.error || ho.error) throw new Error('incomplete crack data');
+    const spread = (2 * rb.price * 42 + ho.price * 42 - 3 * cl.price) / 3;
+    const prevSpread = (2 * rb.prev * 42 + ho.prev * 42 - 3 * cl.prev) / 3;
+    const chg = prevSpread ? ((spread - prevSpread) / Math.abs(prevSpread)) * 100 : 0;
+    document.getElementById('crackPrice').textContent = `$${spread.toFixed(2)}/bbl`;
+    const sign = chg >= 0 ? '+' : '';
+    const cls = chg > 0.01 ? 'pos' : chg < -0.01 ? 'neg' : 'zero';
+    document.getElementById('crackChg').textContent = `${sign}${chg.toFixed(2)}%`;
+    document.getElementById('crackChg').className = `indicator-chg ${cls}`;
+  } catch (e) {
+    document.getElementById('crackPrice').textContent = 'N/A';
+    document.getElementById('crackChg').textContent = '—';
+    document.getElementById('crackChg').className = 'indicator-chg zero';
+  }
+}
+
 // ── Price fetch ──────────────────────────────────────────────────────────────
 async function fetchQuote(ticker) {
 const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
@@ -2570,6 +2740,7 @@ const cd = setInterval(() => {
   else btn.textContent = `↻ Refresh (${remaining}s)`;
 }, 1000);
 render();
+fetchKeyIndicators();
 }
 
 // ── Manual ───────────────────────────────────────────────────────────────────
@@ -2679,6 +2850,7 @@ document.addEventListener('DOMContentLoaded', function() {
 if (sharesHeld) document.getElementById('sharesInput').value = sharesHeld;
 render();
 fetchFundNAV();
+fetchKeyIndicators();
 fetchAll();
 setupHistoryHover();
 setInterval(render, 60000);

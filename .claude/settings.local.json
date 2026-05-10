@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(powershell -File - <<'PSEOF'\n$path = 'C:\\\\Users\\\\Home\\\\Development\\\\Purpose-Global-Resource-Breakdown\\\\PurposeInvestmentBreakdown.html'\n$t = [System.IO.File]::ReadAllText\\($path, [System.Text.Encoding]::UTF8\\)\n$t = $t.Replace\\('Daily Attribution v1.6', 'Daily Attribution v1.7'\\)\n[System.IO.File]::WriteAllText\\($path, $t, [System.Text.Encoding]::UTF8\\)\nWrite-Host \"Done\"\nPSEOF)",
+      "WebFetch(domain:query1.finance.yahoo.com)",
+      "Bash(powershell -File - <<'PSEOF'\n$path = 'C:\\\\Users\\\\Home\\\\Development\\\\Purpose-Global-Resource-Breakdown\\\\PurposeInvestmentBreakdown.html'\n$t = [System.IO.File]::ReadAllText\\($path, [System.Text.Encoding]::UTF8\\)\n$t = $t.Replace\\('Daily Attribution v1.7', 'Daily Attribution v1.8'\\)\n[System.IO.File]::WriteAllText\\($path, $t, [System.Text.Encoding]::UTF8\\)\nPSEOF)",
+      "Bash(git pull:*)",
+      "Bash(gh issue:*)"
+    ]
+  }
+}
