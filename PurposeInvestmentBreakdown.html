@@ -638,7 +638,7 @@ color: var(--text);
 .position-value.negative { color: var(--red); }
 .indicator-value {
   font-family: 'Fraunces', serif;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 200;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -1055,6 +1055,16 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     </div>
   </div>
 
+  <!-- Time Range Selector -->
+
+  <div class="history-range-bar" style="margin-bottom: 20px;">
+    <button class="history-range-btn active" onclick="setHistoryRange('5d',this)">1W</button>
+    <button class="history-range-btn" onclick="setHistoryRange('1mo',this)">1M</button>
+    <button class="history-range-btn" onclick="setHistoryRange('3mo',this)">3M</button>
+    <button class="history-range-btn" onclick="setHistoryRange('6mo',this)">6M</button>
+    <button class="history-range-btn" onclick="setHistoryRange('1y',this)">1Y</button>
+  </div>
+
   <!-- Key Indicators -->
 
   <div class="top-row">
@@ -1062,42 +1072,49 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <div class="summary-label">WTI Crude Oil</div>
       <div class="indicator-value" id="wtiPrice">—</div>
       <div class="indicator-chg" id="wtiChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="CL=F" width="70" height="22"></canvas>
     </div>
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Brent Crude Oil</div>
       <div class="indicator-value" id="brentPrice">—</div>
       <div class="indicator-chg" id="brentChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="BZ=F" width="70" height="22"></canvas>
     </div>
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Gold</div>
       <div class="indicator-value" id="goldPrice">—</div>
       <div class="indicator-chg" id="goldChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="GC=F" width="70" height="22"></canvas>
     </div>
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Silver</div>
       <div class="indicator-value" id="silverPrice">—</div>
       <div class="indicator-chg" id="silverChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="SI=F" width="70" height="22"></canvas>
     </div>
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Lithium</div>
       <div class="indicator-value" id="lithiumPrice">—</div>
       <div class="indicator-chg" id="lithiumChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="LIT" width="70" height="22"></canvas>
     </div>
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Crack Spread</div>
       <div class="indicator-value" id="crackPrice">—</div>
       <div class="indicator-chg" id="crackChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="CRACK" width="70" height="22"></canvas>
     </div>
     <div class="top-row-divider"></div>
     <div class="top-row-item">
       <div class="summary-label">Nat. Gas</div>
       <div class="indicator-value" id="gasPrice">—</div>
       <div class="indicator-chg" id="gasChg">—</div>
+      <canvas class="indicator-sparkline-canvas" data-ticker="NG=F" width="70" height="22"></canvas>
     </div>
   </div>
 
@@ -1231,20 +1248,13 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
     <div id="holdingsTable"></div>
   </div>
 
-  <!-- History -->
+  <!-- Historical Charts -->
 
   <div class="section-label sector-toggle-label" style="margin-top:36px" onclick="toggleHistory()">
-    History
+    Historical Charts
     <span id="historyToggle" style="font-size:8px;opacity:0.55;margin-left:2px">▼ expand</span>
   </div>
   <div id="historyPanel" style="display:none;margin-bottom:28px;">
-    <div class="history-range-bar">
-      <button class="history-range-btn active" onclick="setHistoryRange('5d',this)">1W</button>
-      <button class="history-range-btn" onclick="setHistoryRange('1mo',this)">1M</button>
-      <button class="history-range-btn" onclick="setHistoryRange('3mo',this)">3M</button>
-      <button class="history-range-btn" onclick="setHistoryRange('6mo',this)">6M</button>
-      <button class="history-range-btn" onclick="setHistoryRange('1y',this)">1Y</button>
-    </div>
     <div class="history-chart-wrap">
       <div id="historyLoading" class="history-loading" style="display:none">loading history···</div>
       <canvas id="historyCanvas" style="display:none"></canvas>
@@ -2114,7 +2124,9 @@ const SPARKLINE_COLORS = {
 const NAV_LINE_COLOR = '#eda030';
 
 const historyCache  = {};
+const indicatorHistoryCache = {};
 const hiddenSeries  = new Set();
+window._indicatorSparklineData = {};
 let historyRange      = '5d';
 let historySeriesData = null;
 let historyDates      = null;
@@ -2611,9 +2623,10 @@ function setHistoryRange(range, btn) {
   hiddenSeries.clear();
   document.querySelectorAll('.history-range-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.trend-header-lbl').forEach(el => { el.textContent = 'Trend (' + (RANGE_LABELS[range] || range) + ')'; });
-  if (historyExpanded) loadHistory();
+  loadHistory();
   updateAllSparklines();
   updateSectorSparklines();
+  fetchIndicatorHistory();
 }
 
 function toggleHistory() {
@@ -2674,6 +2687,71 @@ async function fetchKeyIndicators() {
     document.getElementById('crackChg').textContent = '—';
     document.getElementById('crackChg').className = 'indicator-chg zero';
   }
+
+  // Phase 2: Fetch historical data for sparklines (non-blocking)
+  fetchIndicatorHistory();
+}
+
+// ── Indicator Sparklines ─────────────────────────────────────────────────────
+async function fetchIndicatorHistory() {
+  const tickers = ['CL=F', 'BZ=F', 'GC=F', 'SI=F', 'LIT', 'NG=F'];
+  const range = historyRange;
+
+  // Fetch all in parallel
+  const results = await Promise.all([
+    ...tickers.map(t => fetchHistory(t, range)),
+    fetchHistory('RB=F', range),
+    fetchHistory('HO=F', range),
+  ]);
+
+  const tickerData = {};
+  tickers.forEach((t, i) => { tickerData[t] = results[i]; });
+  const rbData = results[tickers.length];
+  const hoData = results[tickers.length + 1];
+
+  // Store in cache
+  tickers.forEach(t => {
+    window._indicatorSparklineData[t] = tickerData[t] || [];
+  });
+  
+  // Handle crack spread separately (derived from CL, RB, HO)
+  const crackPairs = [];
+  const clPairs = tickerData['CL=F'] || [];
+  const clMap = {};
+  clPairs.forEach(p => { clMap[p.t] = p.c; });
+  const rbMap = {};
+  rbData.forEach(p => { rbMap[p.t] = p.c; });
+  const hoMap = {};
+  hoData.forEach(p => { hoMap[p.t] = p.c; });
+  
+  const allTimes = new Set([...Object.keys(clMap), ...Object.keys(rbMap), ...Object.keys(hoMap)]);
+  allTimes.forEach(t => {
+    const cl = clMap[t];
+    const rb = rbMap[t];
+    const ho = hoMap[t];
+    if (cl && rb && ho) {
+      const spread = (2 * rb * 42 + ho * 42 - 3 * cl) / 3;
+      crackPairs.push({ t: parseInt(t), c: spread });
+    }
+  });
+  crackPairs.sort((a, b) => a.t - b.t);
+  window._indicatorSparklineData['CRACK'] = crackPairs;
+
+  drawIndicatorSparklines();
+}
+
+function drawIndicatorSparklines() {
+  const tickers = ['CL=F', 'BZ=F', 'GC=F', 'SI=F', 'LIT', 'CRACK', 'NG=F'];
+  const color = 'rgba(77,175,207,0.7)';
+  
+  tickers.forEach(ticker => {
+    const canvas = document.querySelector(`.indicator-sparkline-canvas[data-ticker="${ticker}"]`);
+    if (!canvas) return;
+    const pairs = window._indicatorSparklineData[ticker];
+    if (pairs && pairs.length > 0) {
+      drawSparkline(canvas, pairs, color);
+    }
+  });
 }
 
 // ── Price fetch ──────────────────────────────────────────────────────────────
@@ -2853,6 +2931,7 @@ render();
 fetchFundNAV();
 fetchKeyIndicators();
 fetchAll();
+loadHistory();
 setupHistoryHover();
 setInterval(render, 60000);
 });
