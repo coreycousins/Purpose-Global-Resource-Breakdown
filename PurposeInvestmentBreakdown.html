@@ -602,6 +602,12 @@ width: 1px;
 background: var(--border);
 flex-shrink: 0;
 }
+.top-row-primary .top-row-item {
+flex: 1 1 auto;
+}
+.top-row-primary .summary-value {
+font-size: 26px;
+}
 .coverage-row {
 background: var(--card-bg);
 border: 1px solid var(--border);
@@ -1012,7 +1018,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
 
   <!-- Row 1: Facts -->
 
-  <div class="top-row">
+  <div class="top-row top-row-primary">
     <div class="top-row-item">
       <div class="summary-label">Shares Held</div>
       <input class="position-input" id="sharesInput" type="number" min="0" placeholder="0" oninput="onSharesInput(this.value)">
