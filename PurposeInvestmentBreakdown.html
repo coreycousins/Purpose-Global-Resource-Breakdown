@@ -2435,9 +2435,12 @@ function drawHistoryChart(hoverIdx = -1) {
   const cH  = H - PAD.t - PAD.b;
 
   let minP = 0, maxP = 0;
-  series.forEach(s => s.pcts.forEach(p => {
-    if (p != null) { minP = Math.min(minP, p); maxP = Math.max(maxP, p); }
-  }));
+  series.forEach(s => {
+    if (hiddenSeries.has(s.label)) return;
+    s.pcts.forEach(p => {
+      if (p != null) { minP = Math.min(minP, p); maxP = Math.max(maxP, p); }
+    });
+  });
   const yPad = Math.max((maxP - minP) * 0.1, 0.5);
   const yMin = minP - yPad, yMax = maxP + yPad;
   const yRng = yMax - yMin;
