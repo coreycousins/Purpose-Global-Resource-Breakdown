@@ -588,7 +588,7 @@ opacity: 0;
 .top-row {
 display: flex;
 align-items: stretch;
-background: var(--border);
+background: var(--card-bg);
 border: 1px solid var(--border);
 overflow: hidden;
 margin-bottom: 6px;
@@ -597,11 +597,21 @@ gap: 1px;
 }
 .top-row-item {
 padding: 18px 20px;
-flex: 0 1 auto;
+flex: 1 1 132px;
+min-width: 132px;
 background: var(--card-bg);
 }
 .top-row-divider {
 display: none;
+}
+@media (min-width: 1080px) {
+  .top-row {
+    flex-wrap: nowrap;
+  }
+  .top-row-item {
+    flex: 1 1 120px;
+    min-width: 120px;
+  }
 }
 .coverage-row {
 background: var(--card-bg);
@@ -652,6 +662,8 @@ color: var(--text);
 .indicator-chg.pos { color: var(--green); }
 .indicator-chg.neg { color: var(--red); }
 .indicator-chg.zero { color: var(--muted); }
+.top-row-item .indicator-chg { text-align: right; }
+.commodity-row .top-row-item { flex-grow: 0; }
 .position-pnl-breakdown {
   display: flex;
   flex-wrap: wrap;
@@ -715,15 +727,12 @@ color: var(--text);
   text-align: right;
   letter-spacing: 0.01em;
 }
-.indicator-chg {
+.indicator-row .indicator-chg {
   font-size: 11px;
   text-align: right;
   min-width: 52px;
   letter-spacing: 0.01em;
 }
-.indicator-chg.pos  { color: var(--green); }
-.indicator-chg.neg  { color: var(--red); }
-.indicator-chg.zero { color: var(--muted); }
 .indicator-derived {
   background: rgba(77,175,207,0.04);
   border: 1px solid rgba(77,175,207,0.13) !important;
@@ -958,6 +967,8 @@ letter-spacing: 0.02em;
 .top-row { flex-wrap: wrap; }
 .top-row-divider { display: none; }
 .top-row-item { flex: 1 1 45%; min-width: 0; border-bottom: 1px solid var(--border); }
+.commodity-row .top-row-item { flex-grow: 1; }
+.top-row-item .indicator-chg { text-align: left; }
 .summary-value { font-size: 20px; }
 .coverage-meta { font-size: 9px; }
 
@@ -1067,7 +1078,7 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
 
   <!-- Key Indicators -->
 
-  <div class="top-row">
+  <div class="top-row commodity-row">
     <div class="top-row-item">
       <div class="summary-label">WTI Crude Oil</div>
       <div class="indicator-value" id="wtiPrice">—</div>
