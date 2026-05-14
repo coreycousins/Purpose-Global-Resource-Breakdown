@@ -1271,6 +1271,10 @@ dbg('6. holdingsTable on window.load: ' + (tbl ? 'FOUND, childCount=' + tbl.chil
       <canvas id="historyCanvas" style="display:none"></canvas>
       <div id="historyTooltip" class="history-tooltip"></div>
     </div>
+    <div style="display:flex;gap:6px;padding:6px 2px 0;align-items:center">
+      <button class="history-range-btn" onclick="hideAllHistorySeries()" style="font-size:8px;padding:3px 8px">Remove All</button>
+      <button class="history-range-btn" onclick="showAllHistorySeries()" style="font-size:8px;padding:3px 8px">Add All</button>
+    </div>
     <div id="historyLegend" class="history-legend"></div>
     <div id="historyNavNote" style="display:none;font-size:9px;color:var(--muted);margin-top:4px;letter-spacing:0.04em">Fund NAV data unavailable</div>
   </div>
@@ -2589,6 +2593,19 @@ function toggleHistorySeries(label) {
   else hiddenSeries.add(label);
   const canvas = document.getElementById('historyCanvas');
   drawHistoryChart(canvas && canvas._hoverIdx != null ? canvas._hoverIdx : -1);
+  renderHistoryLegend();
+}
+
+function hideAllHistorySeries() {
+  if (!historySeriesData) return;
+  historySeriesData.forEach(s => hiddenSeries.add(s.label));
+  drawHistoryChart();
+  renderHistoryLegend();
+}
+
+function showAllHistorySeries() {
+  hiddenSeries.clear();
+  drawHistoryChart();
   renderHistoryLegend();
 }
 
