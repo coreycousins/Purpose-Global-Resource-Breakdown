@@ -2386,6 +2386,27 @@ async function loadHistory() {
     });
   }
 
+  // Estimated NAV: weighted sum of live holdings (cash/unlisted treated as 0% return)
+  const estPcts = masterDates.map((d, i) => {
+    let wSum = 0, wKnown = 0;
+    live.forEach(h => {
+      const s = series.find(ss => ss.ticker === h.ticker);
+      if (!s) return;
+      const p = s.pcts[i];
+      if (p == null) return;
+      wSum   += h.weight * p;
+      wKnown += h.weight;
+    });
+    return wKnown > 0.1 ? wSum : null;
+  });
+  if (estPcts.some(p => p != null)) {
+    series.push({
+      label: 'Est. NAV', ticker: null, cls: 'nav',
+      color: '#7ab8d4', lineWidth: 1.5, isNav: true, isDashed: true,
+      pcts: estPcts,
+    });
+  }
+
   historySeriesData = series;
   historyDates      = masterDates;
   historyDateLabels = masterDates.map(d => {
@@ -2502,7 +2523,9 @@ function drawHistoryChart(hoverIdx = -1) {
     ctx.lineJoin     = 'round';
     ctx.lineCap      = 'round';
     ctx.globalAlpha  = s.isNav ? 1 : 0.65;
+    if (s.isDashed) ctx.setLineDash([5, 4]);
     ctx.stroke();
+    ctx.setLineDash([]);
     ctx.globalAlpha  = 1;
   }
   stockS.forEach(drawLine);
@@ -2551,8 +2574,11 @@ function renderHistoryLegend() {
       ? `<span style="color:${last >= 0 ? 'var(--green)' : 'var(--red)'};margin-left:3px">${sign}${last.toFixed(1)}%</span>`
       : '';
     const safeLabel = s.label.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const swatchStyle = s.isDashed
+      ? `background:repeating-linear-gradient(90deg,${s.color} 0px,${s.color} 5px,transparent 5px,transparent 9px);height:2px`
+      : `background:${s.color};height:${s.isNav ? '3' : '2'}px`;
     return `<div class="history-legend-item" onclick="toggleHistorySeries('${safeLabel}')" style="cursor:pointer;opacity:${hidden ? '0.3' : '1'};transition:opacity 0.15s">
-      <span class="history-legend-line" style="background:${s.color};height:${s.isNav ? '3' : '2'}px"></span>
+      <span class="history-legend-line" style="${swatchStyle}"></span>
       <span style="${hidden ? 'text-decoration:line-through;color:var(--muted)' : ''}">${s.label}</span>${valStr}
     </div>`;
   }).join('');
@@ -2599,9 +2625,13 @@ function setupHistoryHover() {
       if (p == null) return;
       const sign = p >= 0 ? '+' : '';
       const col  = p >= 0 ? 'var(--green)' : 'var(--red)';
+      const tipSwatch = s.isDashed
+        ? `background:repeating-linear-gradient(90deg,${s.color} 0px,${s.color} 4px,transparent 4px,transparent 7px);height:2px`
+        : `background:${s.color};height:${s.isNav ? '3' : '2'}px`;
+      const tipLabelColor = s.isDashed ? s.color : s.isNav ? NAV_LINE_COLOR : 'var(--label)';
       html += `<div style="display:flex;align-items:center;gap:7px">
-        <span style="width:12px;height:${s.isNav ? '3' : '2'}px;background:${s.color};display:inline-block;flex-shrink:0;border-radius:1px"></span>
-        <span style="flex:1;color:${s.isNav ? NAV_LINE_COLOR : 'var(--label)'}">${s.label}</span>
+        <span style="width:12px;${tipSwatch};display:inline-block;flex-shrink:0;border-radius:1px"></span>
+        <span style="flex:1;color:${tipLabelColor}">${s.label}</span>
         <span style="color:${col}">${sign}${p.toFixed(s.isNav ? 2 : 1)}%</span>
       </div>`;
     });
